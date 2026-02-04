@@ -217,7 +217,10 @@ export default function Home() {
         // Skip shapes that are fully transparent
         if (shapeOpacity <= 0.01) continue;
 
-        const shapeAngle = angle + (shapeIndex / currentNumShapes) * Math.PI * 2;
+        // Divide rotation by the curve's symmetry order so shapes fill one
+        // symmetry sector and tile naturally. abs-sin/abs-cos have 2n peaks.
+        const symmetryOrder = Math.max(1, Math.round(currentPetals * ((waveFunction === 'abs-sin' || waveFunction === 'abs-cos') ? 2 : 1)));
+        const shapeAngle = angle + (shapeIndex / (currentNumShapes * symmetryOrder)) * Math.PI * 2;
 
         // Color variations for each shape using palette
         const hue = paletteFunc(currentBaseHue, shapeIndex, currentNumShapes);
@@ -341,8 +344,19 @@ export default function Home() {
           padding: "20px",
           borderRadius: "8px",
           minWidth: "250px",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
+        <div style={{ marginBottom: "20px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
+          <h2 style={{ margin: "0 0 10px 0", fontSize: "18px", color: "#fff" }}>
+            Circle Animation
+          </h2>
+          <a href="/tunnel" style={{ fontSize: "12px", color: "#4488ff", textDecoration: "none" }}>
+            → Try Warp Speed Tunnel
+          </a>
+        </div>
+
         <div style={{ marginBottom: "20px" }}>
           <label
             htmlFor="waveFunction"
