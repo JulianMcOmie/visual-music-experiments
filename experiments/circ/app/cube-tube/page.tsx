@@ -25,6 +25,25 @@ export default function CubeTube() {
   const [hueShift, setHueShift] = useState(0);
   const [lookAhead, setLookAhead] = useState(10);
   const [showControls, setShowControls] = useState(true);
+  const [isPreview, setIsPreview] = useState(false);
+  const pausedRef = useRef(false);
+  const resumeRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (window.location.search.includes("preview")) {
+      setIsPreview(true);
+      setShowControls(false);
+      pausedRef.current = true;
+    }
+  }, []);
+  useEffect(() => {
+    if (!isPreview) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data === "play") { pausedRef.current = false; resumeRef.current?.(); }
+      if (e.data === "pause") { pausedRef.current = true; }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [isPreview]);
 
   // Use refs for all parameters to update smoothly without recreating the scene
   const speedRef = useRef(speed);
@@ -478,7 +497,6 @@ export default function CubeTube() {
     let cameraTParam = 0; // Camera's position along the path
 
     const animate = () => {
-      animationId = requestAnimationFrame(animate);
       time += 0.016;
 
       // Update display values every frame for immediate feedback
@@ -703,8 +721,10 @@ export default function CubeTube() {
       });
 
       renderer.render(scene, camera);
+      if (!pausedRef.current) animationId = requestAnimationFrame(animate);
     };
 
+    resumeRef.current = animate;
     animate();
 
     // Handle resize
@@ -737,7 +757,7 @@ export default function CubeTube() {
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
 
       {/* Direction value display - top right */}
-      <div
+      {!isPreview && <div
         style={{
           position: "absolute",
           top: "20px",
@@ -759,7 +779,7 @@ export default function CubeTube() {
         <div>
           <strong>Y:</strong> {displayDriftY.toFixed(2)}
         </div>
-      </div>
+      </div>}
 
       {/* Controls - left side */}
       <div
@@ -1165,6 +1185,7 @@ export default function CubeTube() {
       </div>
 
       {/* Toggle button */}
+      {!isPreview && (
       <button
         onClick={() => setShowControls(!showControls)}
         style={{
@@ -1182,6 +1203,7 @@ export default function CubeTube() {
       >
         {showControls ? "Hide Controls" : "Show Controls"}
       </button>
+      )}
     </div>
   );
 }

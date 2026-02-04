@@ -6,24 +6,28 @@ const projects = [
     href: "/circle",
     description: "Layered polar wave patterns with rotated shape overlays, concentric rings, and oscillating parameters.",
     color: "#4488ff",
+    bgColor: "#0a0a0a",
   },
   {
     title: "Polar Functions",
     href: "/polar",
     description: "3D rose, spiral, cardioid, lemniscate, and limaçon curves with depth layers and color palettes.",
     color: "#aa66ff",
+    bgColor: "#000510",
   },
   {
     title: "Warp Speed Tunnel",
     href: "/tunnel",
     description: "First-person flight through an infinite procedural tunnel with color-shifting rings.",
     color: "#ff6644",
+    bgColor: "#000508",
   },
   {
     title: "Cube Tube",
     href: "/cube-tube",
     description: "A tube of rotating cubes stretching into depth, with oscillation-driven color and movement.",
     color: "#44cc88",
+    bgColor: "#000510",
   },
 ];
 
@@ -77,12 +81,22 @@ export default function Gallery() {
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLAnchorElement).style.borderColor = project.color;
               (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
+              (e.currentTarget.querySelector("iframe") as HTMLIFrameElement)?.contentWindow?.postMessage("play", "*");
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLAnchorElement).style.borderColor = "#222";
               (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+              (e.currentTarget.querySelector("iframe") as HTMLIFrameElement)?.contentWindow?.postMessage("pause", "*");
             }}
           >
+            <div style={{ overflow: "hidden", borderRadius: "8px", height: "160px", background: project.bgColor }}>
+              <iframe
+                src={`${project.href}?preview`}
+                title={project.title}
+                style={{ width: "100%", height: "100%", border: "none", pointerEvents: "none" }}
+                scrolling="no"
+              />
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div
                 style={{

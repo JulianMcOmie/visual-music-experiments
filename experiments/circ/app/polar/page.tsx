@@ -93,6 +93,25 @@ export default function PolarVisualizer() {
 
 
   const [showControls, setShowControls] = useState(true);
+  const [isPreview, setIsPreview] = useState(false);
+  const pausedRef = useRef(false);
+  const resumeRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (window.location.search.includes("preview")) {
+      setIsPreview(true);
+      setShowControls(false);
+      pausedRef.current = true;
+    }
+  }, []);
+  useEffect(() => {
+    if (!isPreview) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data === "play") { pausedRef.current = false; resumeRef.current?.(); }
+      if (e.data === "pause") { pausedRef.current = true; }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [isPreview]);
 
   // Refs for animation
   const scaleRef = useRef(scale);
@@ -492,7 +511,6 @@ export default function PolarVisualizer() {
     let time = 0;
 
     const animate = () => {
-      animationId = requestAnimationFrame(animate);
       time += 0.016;
 
       // Note: layers, spacing, and timeDelay oscillations are calculated in updateCurves()
@@ -504,8 +522,10 @@ export default function PolarVisualizer() {
       updateCurves(time);
 
       renderer.render(scene, camera);
+      if (!pausedRef.current) animationId = requestAnimationFrame(animate);
     };
 
+    resumeRef.current = animate;
     animate();
 
     // Handle resize
@@ -990,6 +1010,7 @@ export default function PolarVisualizer() {
       </div>
 
       {/* Toggle button */}
+      {!isPreview && (
       <button
         onClick={() => setShowControls(!showControls)}
         style={{
@@ -1007,6 +1028,7 @@ export default function PolarVisualizer() {
       >
         {showControls ? "Hide Controls" : "Show Controls"}
       </button>
+      )}
     </div>
   );
 }

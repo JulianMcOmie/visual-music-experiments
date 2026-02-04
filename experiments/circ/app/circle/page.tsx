@@ -99,8 +99,42 @@ export default function Home() {
   const [layerSpeedOscMax, setLayerSpeedOscMax] = useState(10);
   const [layerSpeedOscFunction, setLayerSpeedOscFunction] = useState<WaveFunction>("sin");
 
+  // Layer time delay controls
+  const [layerTimeDelay, setLayerTimeDelay] = useState(0.1);
+  const [layerTimeDelayOscEnabled, setLayerTimeDelayOscEnabled] = useState(false);
+  const [layerTimeDelayOscFunction, setLayerTimeDelayOscFunction] = useState<WaveFunction>("sin");
+  const [layerTimeDelayOscSpeed, setLayerTimeDelayOscSpeed] = useState(1);
+  const [layerTimeDelayOscMin, setLayerTimeDelayOscMin] = useState(0);
+  const [layerTimeDelayOscMax, setLayerTimeDelayOscMax] = useState(0.5);
+
+  // Rotation controls
+  const [rotationSpeed, setRotationSpeed] = useState(0.01);
+  const [rotationSpeedOscEnabled, setRotationSpeedOscEnabled] = useState(false);
+  const [rotationSpeedOscFunction, setRotationSpeedOscFunction] = useState<WaveFunction>("sin");
+  const [rotationSpeedOscSpeed, setRotationSpeedOscSpeed] = useState(1);
+  const [rotationSpeedOscMin, setRotationSpeedOscMin] = useState(0);
+  const [rotationSpeedOscMax, setRotationSpeedOscMax] = useState(0.05);
+
   const animationRef = useRef<number>();
   const timeRef = useRef(0);
+  const [isPreview, setIsPreview] = useState(false);
+  const pausedRef = useRef(false);
+  const resumeRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (window.location.search.includes("preview")) {
+      setIsPreview(true);
+      pausedRef.current = true;
+    }
+  }, []);
+  useEffect(() => {
+    if (!isPreview) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data === "play") { pausedRef.current = false; resumeRef.current?.(); }
+      if (e.data === "pause") { pausedRef.current = true; }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [isPreview]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -166,22 +200,6 @@ export default function Home() {
         currentShapeSpeed = shapeSpeedOscMin + normalizedWave * (shapeSpeedOscMax - shapeSpeedOscMin);
       }
 
-      // Calculate oscillating petals
-      let currentPetals = petals;
-      if (petalOscillationEnabled) {
-        const petalWave = waveFunctions[petalOscillationFunction];
-        const normalizedWave = (petalWave(timeRef.current * currentPetalSpeed) + 1) / 2;
-        currentPetals = petalOscillationMin + normalizedWave * (petalOscillationMax - petalOscillationMin);
-      }
-
-      // Calculate oscillating radius
-      let currentRadius = radius;
-      if (radiusOscillationEnabled) {
-        const radiusWave = waveFunctions[radiusOscillationFunction];
-        const normalizedWave = (radiusWave(timeRef.current * currentRadiusSpeed) + 1) / 2;
-        currentRadius = radiusOscillationMin + normalizedWave * (radiusOscillationMax - radiusOscillationMin);
-      }
-
       // Calculate oscillating number of layers
       let currentNumLayers = numLayers;
       if (layerOscillationEnabled) {
@@ -198,6 +216,22 @@ export default function Home() {
         const normalizedWave = (oscillationWave(timeRef.current * currentShapeSpeed) + 1) / 2;
         oscillationValue = oscillationMin + normalizedWave * (oscillationMax - oscillationMin);
         currentNumShapes = oscillationMax; // Always draw max shapes for smooth transitions
+      }
+
+      // Calculate layer time delay (with optional oscillation)
+      let currentLayerTimeDelay = layerTimeDelay;
+      if (layerTimeDelayOscEnabled) {
+        const delayWave = waveFunctions[layerTimeDelayOscFunction];
+        const normalizedWave = (delayWave(timeRef.current * layerTimeDelayOscSpeed) + 1) / 2;
+        currentLayerTimeDelay = layerTimeDelayOscMin + normalizedWave * (layerTimeDelayOscMax - layerTimeDelayOscMin);
+      }
+
+      // Calculate rotation speed (with optional oscillation)
+      let currentRotationSpeed = rotationSpeed;
+      if (rotationSpeedOscEnabled) {
+        const rotWave = waveFunctions[rotationSpeedOscFunction];
+        const normalizedWave = (rotWave(timeRef.current * rotationSpeedOscSpeed) + 1) / 2;
+        currentRotationSpeed = rotationSpeedOscMin + normalizedWave * (rotationSpeedOscMax - rotationSpeedOscMin);
       }
 
       // Draw multiple shapes
@@ -217,11 +251,6 @@ export default function Home() {
         // Skip shapes that are fully transparent
         if (shapeOpacity <= 0.01) continue;
 
-        // Divide rotation by the curve's symmetry order so shapes fill one
-        // symmetry sector and tile naturally. abs-sin/abs-cos have 2n peaks.
-        const symmetryOrder = Math.max(1, Math.round(currentPetals * ((waveFunction === 'abs-sin' || waveFunction === 'abs-cos') ? 2 : 1)));
-        const shapeAngle = angle + (shapeIndex / (currentNumShapes * symmetryOrder)) * Math.PI * 2;
-
         // Color variations for each shape using palette
         const hue = paletteFunc(currentBaseHue, shapeIndex, currentNumShapes);
 
@@ -229,8 +258,11 @@ export default function Home() {
         // r(θ) = baseRadius + amplitude * waveFunc(k * θ)
         const points = 360;
 
-        // Draw multiple concentric layers
-        const maxLayers = Math.ceil(currentNumLayers);
+        // Draw multiple concentric layers.
+        // When oscillating, always draw up to the max so the fade logic
+        // handles add/subtract at the outer edge without moving inner layers.
+        const maxLayers = layerOscillationEnabled ? Math.ceil(layerOscillationMax) : numLayers;
+        const layerStep = maxLayers > 1 ? 1.5 / (maxLayers - 1) : 0;
         for (let layerIndex = 0; layerIndex < maxLayers; layerIndex++) {
           // Calculate layer opacity for smooth transitions
           let layerOpacity = shapeOpacity;
@@ -244,69 +276,85 @@ export default function Home() {
 
           if (layerOpacity <= 0.01) continue;
 
-          // Calculate this layer's radius (spread evenly from base to max)
-          const layerProgress = maxLayers > 1 ? layerIndex / (maxLayers - 1) : 0;
-          const layerBaseRadius = currentRadius * (0.5 + layerProgress * 1.5);
+          // Per-layer time delay: each outer layer sees an earlier time snapshot
+          const layerTime = timeRef.current - layerIndex * currentLayerTimeDelay;
+
+          // Recompute petals with delayed time
+          let layerPetals = petals;
+          if (petalOscillationEnabled) {
+            const petalWave = waveFunctions[petalOscillationFunction];
+            const normalizedWave = (petalWave(layerTime * currentPetalSpeed) + 1) / 2;
+            layerPetals = petalOscillationMin + normalizedWave * (petalOscillationMax - petalOscillationMin);
+          }
+
+          // Recompute radius with delayed time
+          let layerRadius = radius;
+          if (radiusOscillationEnabled) {
+            const radiusWave = waveFunctions[radiusOscillationFunction];
+            const normalizedWave = (radiusWave(layerTime * currentRadiusSpeed) + 1) / 2;
+            layerRadius = radiusOscillationMin + normalizedWave * (radiusOscillationMax - radiusOscillationMin);
+          }
+
+          // Offset rotation angle by layer delay
+          const layerAngle = angle - layerIndex * currentLayerTimeDelay * (currentRotationSpeed / 0.016);
+
+          // Symmetry order and per-shape angle (uses per-layer petals)
+          const symmetryOrder = Math.max(1, Math.round(layerPetals * ((waveFunction === 'abs-sin' || waveFunction === 'abs-cos') ? 2 : 1)));
+          const shapeAngle = layerAngle + (shapeIndex / (currentNumShapes * symmetryOrder)) * Math.PI * 2;
+
+          // Crossfade bounds: only ever draw curves at integer petal counts
+          // (they close cleanly at θ=2π) and blend opacity between floor and ceil.
+          const floorPetals = Math.floor(layerPetals);
+          const ceilPetals = Math.ceil(layerPetals);
+          const petalBlend = layerPetals - floorPetals;
+
+          const layerBaseRadius = layerRadius * (0.5 + layerIndex * layerStep);
           const layerAmplitude = layerBaseRadius * 0.8;
 
           // Vary hue for each layer
           const layerHue = (hue + layerIndex * 30) % 360;
 
-          ctx.strokeStyle = `hsla(${layerHue}, 70%, ${60 - layerIndex * 5}%, ${layerOpacity})`;
+          const lightness = 60 - layerIndex * 5;
           ctx.lineWidth = 2;
-          ctx.beginPath();
 
+          // Floor-petal curve fades out as petals approach next integer
+          ctx.strokeStyle = `hsla(${layerHue}, 70%, ${lightness}%, ${(1 - petalBlend) * layerOpacity})`;
+          ctx.beginPath();
           for (let i = 0; i <= points; i++) {
             const theta = (i / points) * Math.PI * 2;
-            const r = layerBaseRadius + layerAmplitude * waveFunc(currentPetals * theta);
-
+            const r = layerBaseRadius + layerAmplitude * waveFunc(floorPetals * theta);
             const x = centerX + r * Math.cos(theta + shapeAngle);
             const y = centerY + r * Math.sin(theta + shapeAngle);
-
-            if (i === 0) {
-              ctx.moveTo(x, y);
-            } else {
-              ctx.lineTo(x, y);
-            }
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
           }
           ctx.closePath();
           ctx.stroke();
 
-          // Draw lines to next layer
-          if (layerIndex < maxLayers - 1) {
-            const nextLayerProgress = (layerIndex + 1) / (maxLayers - 1);
-            const nextLayerBaseRadius = currentRadius * (0.5 + nextLayerProgress * 1.5);
-            const nextLayerAmplitude = nextLayerBaseRadius * 0.8;
-
-            const numLines = Math.ceil(currentPetals * 8);
-            ctx.strokeStyle = `hsla(${(layerHue + 45) % 360}, 70%, 70%, ${layerOpacity * 0.5})`;
-            ctx.lineWidth = 1;
-
-            for (let i = 0; i < numLines; i++) {
-              const theta = (i / numLines) * Math.PI * 2;
-
-              const r1 = layerBaseRadius + layerAmplitude * waveFunc(currentPetals * theta);
-              const x1 = centerX + r1 * Math.cos(theta + shapeAngle);
-              const y1 = centerY + r1 * Math.sin(theta + shapeAngle);
-
-              const r2 = nextLayerBaseRadius + nextLayerAmplitude * waveFunc(currentPetals * theta);
-              const x2 = centerX + r2 * Math.cos(theta + shapeAngle);
-              const y2 = centerY + r2 * Math.sin(theta + shapeAngle);
-
-              ctx.beginPath();
-              ctx.moveTo(x1, y1);
-              ctx.lineTo(x2, y2);
-              ctx.stroke();
+          // Ceil-petal curve fades in
+          if (petalBlend > 0) {
+            ctx.strokeStyle = `hsla(${layerHue}, 70%, ${lightness}%, ${petalBlend * layerOpacity})`;
+            ctx.beginPath();
+            for (let i = 0; i <= points; i++) {
+              const theta = (i / points) * Math.PI * 2;
+              const r = layerBaseRadius + layerAmplitude * waveFunc(ceilPetals * theta);
+              const x = centerX + r * Math.cos(theta + shapeAngle);
+              const y = centerY + r * Math.sin(theta + shapeAngle);
+              if (i === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
             }
+            ctx.closePath();
+            ctx.stroke();
           }
         }
       }
 
-      angle += 0.01;
+      angle += currentRotationSpeed;
       timeRef.current += 0.016;
-      animationRef.current = requestAnimationFrame(animate);
+      if (!pausedRef.current) animationRef.current = requestAnimationFrame(animate);
     };
 
+    resumeRef.current = animate;
     animate();
 
     return () => {
@@ -325,7 +373,9 @@ export default function Home() {
     radiusOscillationEnabled, radiusOscillationSpeed, radiusOscillationMin, radiusOscillationMax, radiusOscillationFunction,
     radiusSpeedOscEnabled, radiusSpeedOscSpeed, radiusSpeedOscMin, radiusSpeedOscMax, radiusSpeedOscFunction,
     layerOscillationEnabled, layerOscillationSpeed, layerOscillationMin, layerOscillationMax, layerOscillationFunction,
-    layerSpeedOscEnabled, layerSpeedOscSpeed, layerSpeedOscMin, layerSpeedOscMax, layerSpeedOscFunction
+    layerSpeedOscEnabled, layerSpeedOscSpeed, layerSpeedOscMin, layerSpeedOscMax, layerSpeedOscFunction,
+    layerTimeDelay, layerTimeDelayOscEnabled, layerTimeDelayOscFunction, layerTimeDelayOscSpeed, layerTimeDelayOscMin, layerTimeDelayOscMax,
+    rotationSpeed, rotationSpeedOscEnabled, rotationSpeedOscFunction, rotationSpeedOscSpeed, rotationSpeedOscMin, rotationSpeedOscMax
   ]);
 
   return (
@@ -335,6 +385,7 @@ export default function Home() {
         style={{ display: "block" }}
       />
 
+      {!isPreview && (
       <div
         style={{
           position: "absolute",
@@ -602,6 +653,35 @@ export default function Home() {
 
         <div style={{ marginBottom: "20px" }}>
           <label
+            htmlFor="rotationSpeed"
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontSize: "14px",
+              color: "#fff",
+            }}
+          >
+            Rotation Speed: {rotationSpeed.toFixed(3)}
+          </label>
+          <input
+            id="rotationSpeed"
+            type="range"
+            min="0"
+            max="0.1"
+            step="0.005"
+            value={rotationSpeed}
+            onChange={(e) => setRotationSpeed(Number(e.target.value))}
+            disabled={rotationSpeedOscEnabled}
+            style={{
+              width: "100%",
+              cursor: rotationSpeedOscEnabled ? "not-allowed" : "pointer",
+              opacity: rotationSpeedOscEnabled ? 0.5 : 1,
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label
             htmlFor="numLayers"
             style={{
               display: "block",
@@ -624,6 +704,35 @@ export default function Home() {
               width: "100%",
               cursor: layerOscillationEnabled ? "not-allowed" : "pointer",
               opacity: layerOscillationEnabled ? 0.5 : 1,
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label
+            htmlFor="layerTimeDelay"
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontSize: "14px",
+              color: "#fff",
+            }}
+          >
+            Layer Time Delay: {layerTimeDelay.toFixed(2)}s
+          </label>
+          <input
+            id="layerTimeDelay"
+            type="range"
+            min="0"
+            max="2"
+            step="0.01"
+            value={layerTimeDelay}
+            onChange={(e) => setLayerTimeDelay(Number(e.target.value))}
+            disabled={layerTimeDelayOscEnabled}
+            style={{
+              width: "100%",
+              cursor: layerTimeDelayOscEnabled ? "not-allowed" : "pointer",
+              opacity: layerTimeDelayOscEnabled ? 0.5 : 1,
             }}
           />
         </div>
@@ -710,7 +819,7 @@ export default function Home() {
                   id="oscillationSpeed"
                   type="range"
                   min="0.1"
-                  max="100"
+                  max="10"
                   step="0.1"
                   value={oscillationSpeed}
                   onChange={(e) => setOscillationSpeed(Number(e.target.value))}
@@ -795,7 +904,7 @@ export default function Home() {
                       <input
                         type="range"
                         min="0.1"
-                        max="100"
+                        max="10"
                         step="0.1"
                         value={shapeSpeedOscMax}
                         onChange={(e) => setShapeSpeedOscMax(Number(e.target.value))}
@@ -951,7 +1060,7 @@ export default function Home() {
                   id="petalOscillationSpeed"
                   type="range"
                   min="0.1"
-                  max="100"
+                  max="10"
                   step="0.1"
                   value={petalOscillationSpeed}
                   onChange={(e) => setPetalOscillationSpeed(Number(e.target.value))}
@@ -1036,7 +1145,7 @@ export default function Home() {
                       <input
                         type="range"
                         min="0.1"
-                        max="100"
+                        max="10"
                         step="0.1"
                         value={petalSpeedOscMax}
                         onChange={(e) => setPetalSpeedOscMax(Number(e.target.value))}
@@ -1192,7 +1301,7 @@ export default function Home() {
                   id="radiusOscillationSpeed"
                   type="range"
                   min="0.1"
-                  max="100"
+                  max="10"
                   step="0.1"
                   value={radiusOscillationSpeed}
                   onChange={(e) => setRadiusOscillationSpeed(Number(e.target.value))}
@@ -1277,7 +1386,7 @@ export default function Home() {
                       <input
                         type="range"
                         min="0.1"
-                        max="100"
+                        max="10"
                         step="0.1"
                         value={radiusSpeedOscMax}
                         onChange={(e) => setRadiusSpeedOscMax(Number(e.target.value))}
@@ -1303,7 +1412,7 @@ export default function Home() {
                 <input
                   id="radiusOscillationMin"
                   type="range"
-                  min="20"
+                  min="0"
                   max="800"
                   value={radiusOscillationMin}
                   onChange={(e) => {
@@ -1433,7 +1542,7 @@ export default function Home() {
                   id="layerOscillationSpeed"
                   type="range"
                   min="0.1"
-                  max="100"
+                  max="10"
                   step="0.1"
                   value={layerOscillationSpeed}
                   onChange={(e) => setLayerOscillationSpeed(Number(e.target.value))}
@@ -1518,7 +1627,7 @@ export default function Home() {
                       <input
                         type="range"
                         min="0.1"
-                        max="100"
+                        max="10"
                         step="0.1"
                         value={layerSpeedOscMax}
                         onChange={(e) => setLayerSpeedOscMax(Number(e.target.value))}
@@ -1591,7 +1700,324 @@ export default function Home() {
             </>
           )}
         </div>
+
+        <div
+          style={{
+            borderTop: "1px solid #444",
+            paddingTop: "20px",
+            marginTop: "20px",
+          }}
+        >
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                fontSize: "14px",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={layerTimeDelayOscEnabled}
+                onChange={(e) => setLayerTimeDelayOscEnabled(e.target.checked)}
+                style={{
+                  marginRight: "8px",
+                  cursor: "pointer",
+                }}
+              />
+              Enable Layer Time Delay Oscillation
+            </label>
+          </div>
+
+          {layerTimeDelayOscEnabled && (
+            <>
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  htmlFor="layerTimeDelayOscFunction"
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontSize: "14px",
+                    color: "#fff",
+                  }}
+                >
+                  Delay Function
+                </label>
+                <select
+                  id="layerTimeDelayOscFunction"
+                  value={layerTimeDelayOscFunction}
+                  onChange={(e) => setLayerTimeDelayOscFunction(e.target.value as WaveFunction)}
+                  style={{
+                    width: "100%",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    background: "#222",
+                    color: "#fff",
+                    border: "1px solid #444",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="sin">Sine</option>
+                  <option value="cos">Cosine</option>
+                  <option value="triangle">Triangle</option>
+                  <option value="sawtooth">Sawtooth</option>
+                  <option value="abs-sin">Absolute Sine</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  htmlFor="layerTimeDelayOscSpeed"
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontSize: "14px",
+                    color: "#fff",
+                  }}
+                >
+                  Speed: {layerTimeDelayOscSpeed.toFixed(2)}
+                </label>
+                <input
+                  id="layerTimeDelayOscSpeed"
+                  type="range"
+                  min="0.1"
+                  max="10"
+                  step="0.1"
+                  value={layerTimeDelayOscSpeed}
+                  onChange={(e) => setLayerTimeDelayOscSpeed(Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    cursor: "pointer",
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  htmlFor="layerTimeDelayOscMin"
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontSize: "14px",
+                    color: "#fff",
+                  }}
+                >
+                  Min Delay: {layerTimeDelayOscMin.toFixed(2)}
+                </label>
+                <input
+                  id="layerTimeDelayOscMin"
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.01"
+                  value={layerTimeDelayOscMin}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setLayerTimeDelayOscMin(val);
+                    if (val > layerTimeDelayOscMax) setLayerTimeDelayOscMax(val);
+                  }}
+                  style={{
+                    width: "100%",
+                    cursor: "pointer",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="layerTimeDelayOscMax"
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontSize: "14px",
+                    color: "#fff",
+                  }}
+                >
+                  Max Delay: {layerTimeDelayOscMax.toFixed(2)}
+                </label>
+                <input
+                  id="layerTimeDelayOscMax"
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.01"
+                  value={layerTimeDelayOscMax}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setLayerTimeDelayOscMax(val);
+                    if (val < layerTimeDelayOscMin) setLayerTimeDelayOscMin(val);
+                  }}
+                  style={{
+                    width: "100%",
+                    cursor: "pointer",
+                  }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div
+          style={{
+            borderTop: "1px solid #444",
+            paddingTop: "20px",
+            marginTop: "20px",
+          }}
+        >
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                fontSize: "14px",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={rotationSpeedOscEnabled}
+                onChange={(e) => setRotationSpeedOscEnabled(e.target.checked)}
+                style={{
+                  marginRight: "8px",
+                  cursor: "pointer",
+                }}
+              />
+              Enable Rotation Oscillation
+            </label>
+          </div>
+
+          {rotationSpeedOscEnabled && (
+            <>
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  htmlFor="rotationSpeedOscFunction"
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontSize: "14px",
+                    color: "#fff",
+                  }}
+                >
+                  Rotation Function
+                </label>
+                <select
+                  id="rotationSpeedOscFunction"
+                  value={rotationSpeedOscFunction}
+                  onChange={(e) => setRotationSpeedOscFunction(e.target.value as WaveFunction)}
+                  style={{
+                    width: "100%",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    background: "#222",
+                    color: "#fff",
+                    border: "1px solid #444",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="sin">Sine</option>
+                  <option value="cos">Cosine</option>
+                  <option value="triangle">Triangle</option>
+                  <option value="sawtooth">Sawtooth</option>
+                  <option value="abs-sin">Absolute Sine</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  htmlFor="rotationSpeedOscSpeed"
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontSize: "14px",
+                    color: "#fff",
+                  }}
+                >
+                  Speed: {rotationSpeedOscSpeed.toFixed(2)}
+                </label>
+                <input
+                  id="rotationSpeedOscSpeed"
+                  type="range"
+                  min="0.1"
+                  max="10"
+                  step="0.1"
+                  value={rotationSpeedOscSpeed}
+                  onChange={(e) => setRotationSpeedOscSpeed(Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    cursor: "pointer",
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label
+                  htmlFor="rotationSpeedOscMin"
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontSize: "14px",
+                    color: "#fff",
+                  }}
+                >
+                  Min Speed: {rotationSpeedOscMin.toFixed(3)}
+                </label>
+                <input
+                  id="rotationSpeedOscMin"
+                  type="range"
+                  min="0"
+                  max="0.1"
+                  step="0.005"
+                  value={rotationSpeedOscMin}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setRotationSpeedOscMin(val);
+                    if (val > rotationSpeedOscMax) setRotationSpeedOscMax(val);
+                  }}
+                  style={{
+                    width: "100%",
+                    cursor: "pointer",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="rotationSpeedOscMax"
+                  style={{
+                    display: "block",
+                    marginBottom: "8px",
+                    fontSize: "14px",
+                    color: "#fff",
+                  }}
+                >
+                  Max Speed: {rotationSpeedOscMax.toFixed(3)}
+                </label>
+                <input
+                  id="rotationSpeedOscMax"
+                  type="range"
+                  min="0"
+                  max="0.1"
+                  step="0.005"
+                  value={rotationSpeedOscMax}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setRotationSpeedOscMax(val);
+                    if (val < rotationSpeedOscMin) setRotationSpeedOscMin(val);
+                  }}
+                  style={{
+                    width: "100%",
+                    cursor: "pointer",
+                  }}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
+      )}
     </div>
   );
 }

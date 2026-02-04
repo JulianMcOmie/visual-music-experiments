@@ -51,6 +51,24 @@ export default function Tunnel() {
   const [colorPalette, setColorPalette] = useState<ColorPalette>("chromatic");
   const animationRef = useRef<number>();
   const timeRef = useRef(0);
+  const [isPreview, setIsPreview] = useState(false);
+  const pausedRef = useRef(false);
+  const resumeRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (window.location.search.includes("preview")) {
+      setIsPreview(true);
+      pausedRef.current = true;
+    }
+  }, []);
+  useEffect(() => {
+    if (!isPreview) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data === "play") { pausedRef.current = false; resumeRef.current?.(); }
+      if (e.data === "pause") { pausedRef.current = true; }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [isPreview]);
 
   // Speed oscillation
   const [speedOscEnabled, setSpeedOscEnabled] = useState(false);
@@ -345,9 +363,10 @@ export default function Tunnel() {
       rotation += currentRotation * 0.02;
       timeRef.current += 0.016;
 
-      animationRef.current = requestAnimationFrame(animate);
+      if (!pausedRef.current) animationRef.current = requestAnimationFrame(animate);
     };
 
+    resumeRef.current = animate;
     animate();
 
     return () => {
@@ -372,6 +391,7 @@ export default function Tunnel() {
         style={{ display: "block", background: "#000508" }}
       />
 
+      {!isPreview && (
       <div
         style={{
           position: "absolute",
@@ -824,6 +844,7 @@ export default function Tunnel() {
           <a href="/" style={{ color: "#4488ff" }}>← Gallery</a>
         </div>
       </div>
+      )}
     </div>
   );
 }
