@@ -985,9 +985,7 @@ export default function PolarVisualizer() {
         </details>
 
         <div style={{ fontSize: "12px", color: "#aaa", marginTop: "20px" }}>
-          <a href="/" style={{ color: "#4488ff" }}>← Back to Circle</a>
-          <br />
-          <a href="/cube-tube" style={{ color: "#4488ff" }}>← Cube Tube</a>
+          <a href="/" style={{ color: "#4488ff" }}>← Gallery</a>
         </div>
       </div>
 

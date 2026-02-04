@@ -1160,9 +1160,7 @@ export default function CubeTube() {
         </details>
 
         <div style={{ fontSize: "12px", color: "#aaa", marginTop: "20px" }}>
-          <a href="/" style={{ color: "#4488ff" }}>← Back to Circle Animation</a>
-          <br />
-          <a href="/tunnel" style={{ color: "#4488ff" }}>← Back to Tunnel</a>
+          <a href="/" style={{ color: "#4488ff" }}>← Gallery</a>
         </div>
       </div>
 
