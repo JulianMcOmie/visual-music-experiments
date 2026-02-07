@@ -49,7 +49,7 @@ export default function Tunnel() {
   const [petals, setPetals] = useState(6);
   const [colorShift, setColorShift] = useState(180);
   const [colorPalette, setColorPalette] = useState<ColorPalette>("chromatic");
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   const timeRef = useRef(0);
   const [isPreview, setIsPreview] = useState(false);
   const pausedRef = useRef(false);

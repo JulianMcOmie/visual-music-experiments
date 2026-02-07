@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import MusicalPane, { DEFAULT_MUSICAL, SCALES } from "./MusicalPane";
+import type { MusicalSettings } from "./MusicalPane";
 
 type WaveFunction = "cos" | "sin" | "abs-sin" | "abs-cos" | "square" | "sawtooth" | "triangle";
 
@@ -115,11 +117,20 @@ export default function Home() {
   const [rotationSpeedOscMin, setRotationSpeedOscMin] = useState(0);
   const [rotationSpeedOscMax, setRotationSpeedOscMax] = useState(0.05);
 
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   const timeRef = useRef(0);
   const [isPreview, setIsPreview] = useState(false);
   const pausedRef = useRef(false);
   const resumeRef = useRef<(() => void) | null>(null);
+
+  // Musical pane
+  const musicalRef = useRef<MusicalSettings>(DEFAULT_MUSICAL);
+  const petalLerpRef = useRef(DEFAULT_MUSICAL.phrases[0].petals);
+  const shapeLerpRef = useRef(DEFAULT_MUSICAL.phrases[0].shapes);
+  const layerLerpRef = useRef(DEFAULT_MUSICAL.phrases[0].layers);
+  const beatDisplayRef = useRef({ beat: 0, step: 0 });
+  const [musicalStep, setMusicalStep] = useState(0);
+  const [musicalBeat, setMusicalBeat] = useState(0);
   useEffect(() => {
     if (window.location.search.includes("preview")) {
       setIsPreview(true);
@@ -135,6 +146,14 @@ export default function Home() {
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, [isPreview]);
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setMusicalStep(beatDisplayRef.current.step);
+      setMusicalBeat(beatDisplayRef.current.beat);
+    }, 100);
+    return () => clearInterval(iv);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -163,11 +182,21 @@ export default function Home() {
       const waveFunc = waveFunctions[waveFunction];
       const paletteFunc = colorPalettes[colorPalette];
 
+      // Quantised time: snaps to beat grid when quantize is enabled
+      const ms = musicalRef.current;
+      let oscTime = timeRef.current;
+      if (ms.enabled && ms.quantizeMode) {
+        const bps = ms.bpm / 60;
+        const [gn, gd] = ms.gridResolution.split("/").map(Number);
+        const grid = gn / gd;
+        oscTime = Math.floor(timeRef.current * bps / grid) * grid / bps;
+      }
+
       // Calculate oscillating base hue
       let currentBaseHue = baseHue;
       if (paletteOscillationEnabled) {
         const hueWave = waveFunctions[paletteOscillationFunction];
-        const normalizedWave = (hueWave(timeRef.current * paletteOscillationSpeed) + 1) / 2;
+        const normalizedWave = (hueWave(oscTime * paletteOscillationSpeed) + 1) / 2;
         currentBaseHue = normalizedWave * 360;
       }
 
@@ -175,28 +204,28 @@ export default function Home() {
       let currentPetalSpeed = petalOscillationSpeed;
       if (petalSpeedOscEnabled) {
         const speedWave = waveFunctions[petalSpeedOscFunction];
-        const normalizedWave = (speedWave(timeRef.current * petalSpeedOscSpeed) + 1) / 2;
+        const normalizedWave = (speedWave(oscTime * petalSpeedOscSpeed) + 1) / 2;
         currentPetalSpeed = petalSpeedOscMin + normalizedWave * (petalSpeedOscMax - petalSpeedOscMin);
       }
 
       let currentRadiusSpeed = radiusOscillationSpeed;
       if (radiusSpeedOscEnabled) {
         const speedWave = waveFunctions[radiusSpeedOscFunction];
-        const normalizedWave = (speedWave(timeRef.current * radiusSpeedOscSpeed) + 1) / 2;
+        const normalizedWave = (speedWave(oscTime * radiusSpeedOscSpeed) + 1) / 2;
         currentRadiusSpeed = radiusSpeedOscMin + normalizedWave * (radiusSpeedOscMax - radiusSpeedOscMin);
       }
 
       let currentLayerSpeed = layerOscillationSpeed;
       if (layerSpeedOscEnabled) {
         const speedWave = waveFunctions[layerSpeedOscFunction];
-        const normalizedWave = (speedWave(timeRef.current * layerSpeedOscSpeed) + 1) / 2;
+        const normalizedWave = (speedWave(oscTime * layerSpeedOscSpeed) + 1) / 2;
         currentLayerSpeed = layerSpeedOscMin + normalizedWave * (layerSpeedOscMax - layerSpeedOscMin);
       }
 
       let currentShapeSpeed = oscillationSpeed;
       if (shapeSpeedOscEnabled) {
         const speedWave = waveFunctions[shapeSpeedOscFunction];
-        const normalizedWave = (speedWave(timeRef.current * shapeSpeedOscSpeed) + 1) / 2;
+        const normalizedWave = (speedWave(oscTime * shapeSpeedOscSpeed) + 1) / 2;
         currentShapeSpeed = shapeSpeedOscMin + normalizedWave * (shapeSpeedOscMax - shapeSpeedOscMin);
       }
 
@@ -204,7 +233,7 @@ export default function Home() {
       let currentNumLayers = numLayers;
       if (layerOscillationEnabled) {
         const layerWave = waveFunctions[layerOscillationFunction];
-        const normalizedWave = (layerWave(timeRef.current * currentLayerSpeed) + 1) / 2;
+        const normalizedWave = (layerWave(oscTime * currentLayerSpeed) + 1) / 2;
         currentNumLayers = layerOscillationMin + normalizedWave * (layerOscillationMax - layerOscillationMin);
       }
 
@@ -213,7 +242,7 @@ export default function Home() {
       let oscillationValue = 0;
       if (oscillationEnabled) {
         const oscillationWave = waveFunctions[oscillationFunction];
-        const normalizedWave = (oscillationWave(timeRef.current * currentShapeSpeed) + 1) / 2;
+        const normalizedWave = (oscillationWave(oscTime * currentShapeSpeed) + 1) / 2;
         oscillationValue = oscillationMin + normalizedWave * (oscillationMax - oscillationMin);
         currentNumShapes = oscillationMax; // Always draw max shapes for smooth transitions
       }
@@ -222,7 +251,7 @@ export default function Home() {
       let currentLayerTimeDelay = layerTimeDelay;
       if (layerTimeDelayOscEnabled) {
         const delayWave = waveFunctions[layerTimeDelayOscFunction];
-        const normalizedWave = (delayWave(timeRef.current * layerTimeDelayOscSpeed) + 1) / 2;
+        const normalizedWave = (delayWave(oscTime * layerTimeDelayOscSpeed) + 1) / 2;
         currentLayerTimeDelay = layerTimeDelayOscMin + normalizedWave * (layerTimeDelayOscMax - layerTimeDelayOscMin);
       }
 
@@ -230,15 +259,59 @@ export default function Home() {
       let currentRotationSpeed = rotationSpeed;
       if (rotationSpeedOscEnabled) {
         const rotWave = waveFunctions[rotationSpeedOscFunction];
-        const normalizedWave = (rotWave(timeRef.current * rotationSpeedOscSpeed) + 1) / 2;
+        const normalizedWave = (rotWave(oscTime * rotationSpeedOscSpeed) + 1) / 2;
         currentRotationSpeed = rotationSpeedOscMin + normalizedWave * (rotationSpeedOscMax - rotationSpeedOscMin);
+      }
+
+      // --- Musical overrides ---
+      let phraseActive = false;
+
+      if (ms.enabled && ms.ratioMode) {
+        const bps = ms.bpm / 60;
+        const base = bps * 2 * Math.PI;
+        const r = (s: string) => { const [n, d] = s.split("/").map(Number); return n / d; };
+        currentPetalSpeed = r(ms.ratios.petals) * base;
+        currentShapeSpeed = r(ms.ratios.shapes) * base;
+        currentRadiusSpeed = r(ms.ratios.radius) * base;
+        currentLayerSpeed = r(ms.ratios.layers) * base;
+        currentRotationSpeed = r(ms.ratios.rotation) * ms.bpm * Math.PI / 1800;
+      }
+
+      if (ms.enabled && ms.phraseMode && ms.phrases.length > 0) {
+        phraseActive = true;
+        const bps = ms.bpm / 60;
+        const realBeat = timeRef.current * bps;
+        const totalBeats = ms.phrases.reduce((acc, p) => acc + p.duration, 0);
+        const loopedBeat = ms.phraseLoop ? realBeat % totalBeats : Math.min(realBeat, totalBeats - 0.001);
+        let accum = 0, stepIdx = ms.phrases.length - 1;
+        for (let i = 0; i < ms.phrases.length; i++) {
+          if (loopedBeat < accum + ms.phrases[i].duration) { stepIdx = i; break; }
+          accum += ms.phrases[i].duration;
+        }
+        const step = ms.phrases[stepIdx];
+        petalLerpRef.current += (step.petals - petalLerpRef.current) * 0.08;
+        shapeLerpRef.current += (step.shapes - shapeLerpRef.current) * 0.08;
+        layerLerpRef.current += (step.layers - layerLerpRef.current) * 0.08;
+        currentNumShapes = Math.ceil(shapeLerpRef.current);
+        oscillationValue = shapeLerpRef.current;
+        currentNumLayers = layerLerpRef.current;
+        beatDisplayRef.current = { beat: loopedBeat, step: stepIdx };
+      } else if (ms.enabled) {
+        beatDisplayRef.current.beat = timeRef.current * (ms.bpm / 60);
+      }
+
+      if (ms.enabled && ms.chromaticMode) {
+        const effectivePetals = phraseActive ? Math.round(petalLerpRef.current) : petals;
+        const scale = SCALES[ms.scale] || SCALES.pentatonic;
+        const idx = ((effectivePetals - 1) % scale.length + scale.length) % scale.length;
+        currentBaseHue = ((ms.rootNote + scale[idx]) * 30) % 360;
       }
 
       // Draw multiple shapes
       for (let shapeIndex = 0; shapeIndex < currentNumShapes; shapeIndex++) {
         // Calculate opacity for smooth fade in/out during oscillation (quicker fade)
         let shapeOpacity = 1.0;
-        if (oscillationEnabled) {
+        if (oscillationEnabled || phraseActive) {
           // Shapes fade out as oscillation value decreases
           const shapeThreshold = shapeIndex + 1;
           if (oscillationValue < shapeThreshold) {
@@ -261,12 +334,12 @@ export default function Home() {
         // Draw multiple concentric layers.
         // When oscillating, always draw up to the max so the fade logic
         // handles add/subtract at the outer edge without moving inner layers.
-        const maxLayers = layerOscillationEnabled ? Math.ceil(layerOscillationMax) : numLayers;
+        const maxLayers = phraseActive ? Math.ceil(layerLerpRef.current) : (layerOscillationEnabled ? Math.ceil(layerOscillationMax) : numLayers);
         const layerStep = maxLayers > 1 ? 1.5 / (maxLayers - 1) : 0;
         for (let layerIndex = 0; layerIndex < maxLayers; layerIndex++) {
           // Calculate layer opacity for smooth transitions
           let layerOpacity = shapeOpacity;
-          if (layerOscillationEnabled) {
+          if (layerOscillationEnabled || phraseActive) {
             const layerThreshold = layerIndex + 1;
             if (currentNumLayers < layerThreshold) {
               const fadeValue = Math.max(0, currentNumLayers - layerIndex);
@@ -277,7 +350,7 @@ export default function Home() {
           if (layerOpacity <= 0.01) continue;
 
           // Per-layer time delay: each outer layer sees an earlier time snapshot
-          const layerTime = timeRef.current - layerIndex * currentLayerTimeDelay;
+          const layerTime = oscTime - layerIndex * currentLayerTimeDelay;
 
           // Recompute petals with delayed time
           let layerPetals = petals;
@@ -286,6 +359,7 @@ export default function Home() {
             const normalizedWave = (petalWave(layerTime * currentPetalSpeed) + 1) / 2;
             layerPetals = petalOscillationMin + normalizedWave * (petalOscillationMax - petalOscillationMin);
           }
+          if (phraseActive) layerPetals = petalLerpRef.current;
 
           // Recompute radius with delayed time
           let layerRadius = radius;
@@ -2017,6 +2091,10 @@ export default function Home() {
           )}
         </div>
       </div>
+      )}
+
+      {!isPreview && (
+        <MusicalPane settingsRef={musicalRef} currentStep={musicalStep} currentBeat={musicalBeat} />
       )}
     </div>
   );

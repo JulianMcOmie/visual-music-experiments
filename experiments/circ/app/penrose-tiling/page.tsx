@@ -7,6 +7,52 @@ type WaveFunction = "sin" | "cos" | "triangle" | "sawtooth" | "custom";
 type DelayFunction = "linear" | "quadratic" | "sqrt" | "exponential" | "inverse";
 type DelayMode = "distance" | "angle" | "spiral" | "radial";
 
+interface SettingKeyframe {
+  id: string;
+  type: "setting";
+  time: number;
+  settings: {
+    layers: number;
+    rotation: number;
+    hue: number;
+    scale: number;
+    layerTimeDelay: number;
+    delayFunction: DelayFunction;
+    delayMode: DelayMode;
+    colorPalette: string;
+    tileRotation: number;
+    tileSpread: number;
+    angleOffset: number;
+    delayModeParam: number;
+    delayFunctionPower: number;
+    // Oscillator states
+    rotationOscEnabled: boolean;
+    hueOscEnabled: boolean;
+    layerOscEnabled: boolean;
+    timeDelayOscEnabled: boolean;
+    angleOffsetOscEnabled: boolean;
+    delayModeParamOscEnabled: boolean;
+    delayFunctionPowerOscEnabled: boolean;
+    tileRotationOscEnabled: boolean;
+    tileSpreadOscEnabled: boolean;
+  };
+}
+
+interface TileKeyframe {
+  id: string;
+  type: "tile";
+  time: number;
+  tileStates: Map<number, {
+    spread: number;
+    globalRotation: number;
+    individualRotation: number;
+    hue: number;
+    scale: number;
+  }>;
+}
+
+type Keyframe = SettingKeyframe | TileKeyframe;
+
 const waveFunctions: Record<Exclude<WaveFunction, "custom">, (x: number) => number> = {
   sin: (x) => Math.sin(x),
   cos: (x) => Math.cos(x),
@@ -335,13 +381,28 @@ export default function PenroseTiling() {
   const [delayFunctionPowerOscCustomCosWeight, setDelayFunctionPowerOscCustomCosWeight] = useState(0.5);
   const [delayFunctionPowerOscCustomCosFreq, setDelayFunctionPowerOscCustomCosFreq] = useState(1);
 
+  // Timeline state
+  const [keyframes, setKeyframes] = useState<Keyframe[]>([]);
+  const [timelinePosition, setTimelinePosition] = useState(0);
+  const [isTimelinePlaying, setIsTimelinePlaying] = useState(false);
+  const [timelineDuration, setTimelineDuration] = useState(60); // 60 seconds default
+  const timelineStartTimeRef = useRef<number | null>(null);
+  const lastTimelinePositionRef = useRef<number>(0);
+  const processedKeyframesRef = useRef<Set<string>>(new Set());
+
+  // UI state
+  const [isControlPanelCollapsed, setIsControlPanelCollapsed] = useState(false);
+  const [timelineHeight, setTimelineHeight] = useState(100);
+  const [isResizingTimeline, setIsResizingTimeline] = useState(false);
+
   const animationRef = useRef<number | undefined>(undefined);
   const timeRef = useRef<number>(0);
   const tilingRef = useRef<TilingState | null>(null);
   const pausedTimeRef = useRef<number | null>(null);
+
+  // Manual pause/resume system (main pause button)
   const resumeStartTimeRef = useRef<number | null>(null);
   const transitionTimeRef = useRef<number>(0); // Separate timer for transition progress
-  // Store per-tile visual states at the start of resume transition (frozen state)
   const resumeTileStatesRef = useRef<Map<number, {
     spread: number;
     globalRotation: number;
@@ -349,6 +410,43 @@ export default function PenroseTiling() {
     hue: number;
     scale: number;
   }> | null>(null);
+
+  // Timeline keyframe transition system (separate from manual pause)
+  const timelineTransitionStartRef = useRef<number | null>(null);
+  const timelineTransitionTimeRef = useRef<number>(0);
+  const timelineTransitionFrameRef = useRef<number>(0); // Track which frame we're on
+  const timelineFrozenStatesRef = useRef<Map<number, {
+    spread: number;
+    globalRotation: number;
+    individualRotation: number;
+    hue: number;
+    scale: number;
+  }> | null>(null);
+  const timelineTargetStatesRef = useRef<Map<number, {
+    spread: number;
+    globalRotation: number;
+    individualRotation: number;
+    hue: number;
+    scale: number;
+  }> | null>(null);
+  const captureStateForTransitionRef = useRef<boolean>(false);
+  const pendingSettingsRef = useRef<any>(null); // Store settings to apply AFTER capturing frozen state
+  const isTileStateLocked = useRef<boolean>(false); // When true, use locked tile states instead of calculating
+  const lockedTileStatesRef = useRef<Map<number, {
+    spread: number;
+    globalRotation: number;
+    individualRotation: number;
+    hue: number;
+    scale: number;
+  }> | null>(null);
+  const savedKeyframeTileStatesRef = useRef<Map<number, {
+    spread: number;
+    globalRotation: number;
+    individualRotation: number;
+    hue: number;
+    scale: number;
+  }> | null>(null);
+
   // Store per-tile target states for smooth interpolation (calculated once at resume)
   const resumeTargetStatesRef = useRef<Map<number, {
     spread: number;
@@ -388,7 +486,7 @@ export default function PenroseTiling() {
     tileRotationOscEnabled: boolean;
     tileSpreadOscEnabled: boolean;
   } | null>(null);
-  const TRANSITION_DURATION = 5.0; // seconds
+  const TRANSITION_DURATION = 1.0; // seconds
 
   // Cache tilings for different layer counts to avoid regenerating
   const tilingCacheRef = useRef<Map<number, TilingState>>(new Map());
@@ -398,6 +496,63 @@ export default function PenroseTiling() {
       tilingCacheRef.current.set(numLayers, generateTiling(numLayers, 100));
     }
     return tilingCacheRef.current.get(numLayers)!;
+  };
+
+  // Save current settings as a keyframe
+  const saveSettingState = () => {
+    const keyframe: SettingKeyframe = {
+      id: `setting-${Date.now()}`,
+      type: "setting",
+      time: timelinePosition,
+      settings: {
+        layers,
+        rotation,
+        hue,
+        scale,
+        layerTimeDelay,
+        delayFunction,
+        delayMode,
+        colorPalette,
+        tileRotation,
+        tileSpread,
+        angleOffset,
+        delayModeParam,
+        delayFunctionPower,
+        rotationOscEnabled,
+        hueOscEnabled,
+        layerOscEnabled,
+        timeDelayOscEnabled,
+        angleOffsetOscEnabled,
+        delayModeParamOscEnabled,
+        delayFunctionPowerOscEnabled,
+        tileRotationOscEnabled,
+        tileSpreadOscEnabled,
+      },
+    };
+    setKeyframes(prev => [...prev, keyframe].sort((a, b) => a.time - b.time));
+    console.log('Saved setting keyframe at', timelinePosition);
+  };
+
+  // Save current tile states as a keyframe
+  const saveTileState = () => {
+    // If not paused, we need to pause first to capture current state
+    if (!resumeTileStatesRef.current) {
+      alert('Please pause (click the main pause button) first to capture the current tile state.');
+      return;
+    }
+
+    const keyframe: TileKeyframe = {
+      id: `tile-${Date.now()}`,
+      type: "tile",
+      time: timelinePosition,
+      tileStates: new Map(resumeTileStatesRef.current),
+    };
+    setKeyframes(prev => [...prev, keyframe].sort((a, b) => a.time - b.time));
+    console.log('Saved tile keyframe at', timelinePosition, 'with', resumeTileStatesRef.current.size, 'tiles');
+  };
+
+  const removeKeyframe = (id: string) => {
+    setKeyframes(prev => prev.filter(kf => kf.id !== id));
   };
 
   const toggleAllOscillators = () => {
@@ -441,6 +596,107 @@ export default function PenroseTiling() {
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, [isPreview]);
+
+  // Timeline playback
+  useEffect(() => {
+    if (!isTimelinePlaying) {
+      timelineStartTimeRef.current = null;
+      return;
+    }
+
+    if (timelineStartTimeRef.current === null) {
+      timelineStartTimeRef.current = Date.now() - (timelinePosition * 1000);
+    }
+
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - timelineStartTimeRef.current!) / 1000;
+      if (elapsed >= timelineDuration) {
+        setTimelinePosition(0);
+        setIsTimelinePlaying(false);
+        timelineStartTimeRef.current = null;
+        processedKeyframesRef.current.clear(); // Reset when looping
+      } else {
+        setTimelinePosition(elapsed);
+      }
+    }, 16);
+
+    return () => clearInterval(interval);
+  }, [isTimelinePlaying, timelineDuration]);
+
+  // Keyframe detection and processing
+  useEffect(() => {
+    const lastPos = lastTimelinePositionRef.current;
+    const currentPos = timelinePosition;
+
+    // Reset processed keyframes if scrubbing backwards
+    if (currentPos < lastPos) {
+      processedKeyframesRef.current.clear();
+    }
+
+    // Find keyframes between last and current position
+    const crossedKeyframes = keyframes.filter(kf => {
+      const crossed = lastPos < kf.time && kf.time <= currentPos;
+      const notProcessed = !processedKeyframesRef.current.has(kf.id);
+      return crossed && notProcessed;
+    });
+
+    // Process each crossed keyframe
+    for (const keyframe of crossedKeyframes) {
+      console.log('Processing keyframe:', keyframe.type, 'at time:', keyframe.time);
+      processedKeyframesRef.current.add(keyframe.id);
+
+      if (keyframe.type === "setting") {
+        console.log('Setting keyframe: storing new settings (will apply after capturing frozen state)');
+
+        // Store settings to apply AFTER we capture frozen state
+        pendingSettingsRef.current = keyframe.settings;
+
+        // Unlock tile state - resume normal calculation after interpolation
+        isTileStateLocked.current = false;
+        lockedTileStatesRef.current = null;
+
+        // Signal to capture state and start transition on next frame
+        captureStateForTransitionRef.current = true;
+        savedKeyframeTileStatesRef.current = null;
+
+      } else if (keyframe.type === "tile") {
+        console.log('Tile keyframe: locking to saved tile states');
+
+        // Save the keyframe tile states to use as targets and lock them
+        savedKeyframeTileStatesRef.current = new Map(keyframe.tileStates);
+
+        // Lock tile state - these states will persist after interpolation
+        isTileStateLocked.current = true;
+
+        // Signal to capture state and start transition on next frame
+        captureStateForTransitionRef.current = true;
+      }
+    }
+
+    lastTimelinePositionRef.current = currentPos;
+  }, [timelinePosition, keyframes]);
+
+  // Timeline resize handler
+  useEffect(() => {
+    if (!isResizingTimeline) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newHeight = window.innerHeight - e.clientY;
+      setTimelineHeight(Math.max(80, Math.min(400, newHeight)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingTimeline(false);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizingTimeline]);
 
   // Clear cache when layers setting changes manually
   useEffect(() => {
@@ -662,8 +918,10 @@ export default function PenroseTiling() {
         currentTileSpread = tileSpreadOscMin + normalizedWave * (tileSpreadOscMax - tileSpreadOscMin);
       }
 
-      // Check if transitioning
-      const isTransitioning = resumeStartTimeRef.current !== null;
+      // Check if transitioning (manual pause or timeline)
+      const isManualTransitioning = resumeStartTimeRef.current !== null;
+      const isTimelineTransitioning = timelineTransitionStartRef.current !== null;
+      const isTransitioning = isManualTransitioning || isTimelineTransitioning;
 
       // Freeze structural settings when paused to prevent teleporting
       if (isPausedRef.current && frozenStructuralSettingsRef.current === null) {
@@ -702,8 +960,10 @@ export default function PenroseTiling() {
       // Handle pause/resume states
       const isPaused = isPausedRef.current;
       let transitionProgress = 0;
+      let timelineTransitionProgress = 0;
 
-      if (isTransitioning) {
+      // Manual pause transition
+      if (isManualTransitioning) {
         transitionProgress = Math.min(transitionTimeRef.current / TRANSITION_DURATION, 1.0);
 
         // Check if transition is complete
@@ -714,9 +974,52 @@ export default function PenroseTiling() {
         }
       }
 
-      // Capture frozen state when first paused
+      // Timeline transition (takes priority)
+      if (isTimelineTransitioning) {
+        timelineTransitionProgress = Math.min(timelineTransitionTimeRef.current / TRANSITION_DURATION, 1.0);
+
+        // Check if transition is complete
+        if (timelineTransitionProgress >= 1.0) {
+          console.log('Timeline transition complete');
+
+          // If tile state is locked, save the target states as locked states
+          if (isTileStateLocked.current && timelineTargetStatesRef.current) {
+            lockedTileStatesRef.current = new Map(timelineTargetStatesRef.current);
+            console.log('Locked tile states saved:', lockedTileStatesRef.current.size, 'tiles');
+          }
+
+          // Clear all transition state
+          timelineTransitionStartRef.current = null;
+          timelineFrozenStatesRef.current = null;
+          timelineTargetStatesRef.current = null;
+          timelineTransitionFrameRef.current = 0;
+          savedKeyframeTileStatesRef.current = null; // Clear saved keyframe data
+        }
+      }
+
+      // Capture frozen state when first paused (manual pause)
       if (isPaused && resumeTileStatesRef.current === null) {
         resumeTileStatesRef.current = new Map();
+      }
+
+      // Handle state capture for timeline transition
+      if (captureStateForTransitionRef.current) {
+        console.log('Starting new timeline transition');
+        captureStateForTransitionRef.current = false;
+
+        // Clear previous transition state completely
+        timelineFrozenStatesRef.current = new Map();
+        timelineTargetStatesRef.current = new Map();
+        timelineTransitionFrameRef.current = 0;
+
+        // Start the transition
+        timelineTransitionStartRef.current = timeRef.current;
+        timelineTransitionTimeRef.current = 0;
+      }
+
+      // Capture frozen state for timeline transition
+      if (isTimelineTransitioning && timelineFrozenStatesRef.current === null) {
+        timelineFrozenStatesRef.current = new Map();
       }
 
       // Draw each tile with individual transformations for per-tile rotation
@@ -827,8 +1130,90 @@ export default function PenroseTiling() {
           tileHue = min;
         }
 
-        // Freeze visual state while paused, then interpolate on resume
-        if (resumeTileStatesRef.current !== null) {
+        // Check if we should use locked tile states (tile keyframe is active)
+        if (isTileStateLocked.current && !isTimelineTransitioning && lockedTileStatesRef.current && lockedTileStatesRef.current.has(tileIndex)) {
+          // Use locked tile state - don't calculate anything
+          const lockedState = lockedTileStatesRef.current.get(tileIndex)!;
+          tileLevelSpread = lockedState.spread;
+          globalRotation = lockedState.globalRotation;
+          individualRotation = lockedState.individualRotation;
+          tileHue = lockedState.hue;
+        }
+        // Timeline transitions take priority over manual pause
+        else if (isTimelineTransitioning && timelineFrozenStatesRef.current !== null && timelineTargetStatesRef.current !== null) {
+          const currentFrame = timelineTransitionFrameRef.current;
+
+          // On FIRST frame only: capture frozen state (current visual before transition)
+          if (currentFrame === 0 && !timelineFrozenStatesRef.current.has(tileIndex)) {
+            timelineFrozenStatesRef.current.set(tileIndex, {
+              spread: tileLevelSpread,
+              globalRotation: globalRotation,
+              individualRotation: individualRotation,
+              hue: tileHue,
+              scale: actualScale,
+            });
+          }
+
+          // On THIRD frame (frame 2): capture target state ONCE after React has processed setState
+          // Frame 0: capture frozen, queue setState
+          // Frame 1: React processes updates, don't capture yet
+          // Frame 2: Now capture target with new settings
+          if (currentFrame === 2 && !timelineTargetStatesRef.current.has(tileIndex)) {
+            // Check if we have a saved state from a tile keyframe for this specific tile
+            if (savedKeyframeTileStatesRef.current && savedKeyframeTileStatesRef.current.has(tileIndex)) {
+              // Use the saved keyframe state as the target
+              const savedState = savedKeyframeTileStatesRef.current.get(tileIndex)!;
+              timelineTargetStatesRef.current.set(tileIndex, savedState);
+              console.log(`Tile ${tileIndex}: using saved keyframe state as target`);
+            } else {
+              // For setting keyframes, capture calculated state ONCE (with new settings)
+              timelineTargetStatesRef.current.set(tileIndex, {
+                spread: tileLevelSpread,
+                globalRotation: globalRotation,
+                individualRotation: individualRotation,
+                hue: tileHue,
+                scale: actualScale,
+              });
+              console.log(`Tile ${tileIndex}: captured calculated target state`);
+            }
+          }
+
+          // Interpolate if we have both frozen and target states
+          if (timelineFrozenStatesRef.current.has(tileIndex) && timelineTargetStatesRef.current.has(tileIndex)) {
+            const frozenState = timelineFrozenStatesRef.current.get(tileIndex)!;
+            const targetState = timelineTargetStatesRef.current.get(tileIndex)!;
+            const easedProgress = timelineTransitionProgress * timelineTransitionProgress * (3 - 2 * timelineTransitionProgress);
+
+            // Interpolate all values
+            tileLevelSpread = frozenState.spread + (targetState.spread - frozenState.spread) * easedProgress;
+
+            let globalRotDiff = targetState.globalRotation - frozenState.globalRotation;
+            while (globalRotDiff > Math.PI) globalRotDiff -= 2 * Math.PI;
+            while (globalRotDiff < -Math.PI) globalRotDiff += 2 * Math.PI;
+            globalRotation = frozenState.globalRotation + globalRotDiff * easedProgress;
+
+            let individualRotDiff = targetState.individualRotation - frozenState.individualRotation;
+            while (individualRotDiff > Math.PI) individualRotDiff -= 2 * Math.PI;
+            while (individualRotDiff < -Math.PI) individualRotDiff += 2 * Math.PI;
+            individualRotation = frozenState.individualRotation + individualRotDiff * easedProgress;
+
+            let hueDiff = targetState.hue - frozenState.hue;
+            while (hueDiff > 180) hueDiff -= 360;
+            while (hueDiff < -180) hueDiff += 360;
+            tileHue = frozenState.hue + hueDiff * easedProgress;
+          } else if (currentFrame <= 1) {
+            // On frames 0-1, use frozen state (freeze visual while React processes)
+            if (timelineFrozenStatesRef.current.has(tileIndex)) {
+              const frozenState = timelineFrozenStatesRef.current.get(tileIndex)!;
+              tileLevelSpread = frozenState.spread;
+              globalRotation = frozenState.globalRotation;
+              individualRotation = frozenState.individualRotation;
+              tileHue = frozenState.hue;
+            }
+          }
+        }
+        // Manual pause/resume (only if not doing timeline transition)
+        else if (resumeTileStatesRef.current !== null) {
           // Save current calculated state when first pausing
           if (!resumeTileStatesRef.current.has(tileIndex)) {
             resumeTileStatesRef.current.set(tileIndex, {
@@ -848,7 +1233,7 @@ export default function PenroseTiling() {
             globalRotation = savedState.globalRotation;
             individualRotation = savedState.individualRotation;
             tileHue = savedState.hue;
-          } else if (isTransitioning) {
+          } else if (isManualTransitioning) {
             // Save target states on first frame of transition
             if (resumeTargetStatesRef.current === null) {
               resumeTargetStatesRef.current = new Map();
@@ -917,9 +1302,50 @@ export default function PenroseTiling() {
         ctx.restore();
       }
 
-      // Draw transition timer in bottom right
-      if (isTransitioning && !isPaused) {
-        const remainingTime = TRANSITION_DURATION * (1 - transitionProgress);
+      // Increment timeline transition frame counter and apply pending settings
+      if (isTimelineTransitioning) {
+        const currentFrame = timelineTransitionFrameRef.current;
+
+        // After frame 0 (frozen state captured), apply pending settings
+        if (currentFrame === 0 && pendingSettingsRef.current) {
+          console.log('Applying pending settings after frozen state capture');
+          const s = pendingSettingsRef.current;
+
+          // Apply settings normally - React will process them
+          setLayers(s.layers);
+          setRotation(s.rotation);
+          setHue(s.hue);
+          setScale(s.scale);
+          setLayerTimeDelay(s.layerTimeDelay);
+          setDelayFunction(s.delayFunction);
+          setDelayMode(s.delayMode);
+          setColorPalette(s.colorPalette);
+          setTileRotation(s.tileRotation);
+          setTileSpread(s.tileSpread);
+          setAngleOffset(s.angleOffset);
+          setDelayModeParam(s.delayModeParam);
+          setDelayFunctionPower(s.delayFunctionPower);
+          setRotationOscEnabled(s.rotationOscEnabled);
+          setHueOscEnabled(s.hueOscEnabled);
+          setLayerOscEnabled(s.layerOscEnabled);
+          setTimeDelayOscEnabled(s.timeDelayOscEnabled);
+          setAngleOffsetOscEnabled(s.angleOffsetOscEnabled);
+          setDelayModeParamOscEnabled(s.delayModeParamOscEnabled);
+          setDelayFunctionPowerOscEnabled(s.delayFunctionPowerOscEnabled);
+          setTileRotationOscEnabled(s.tileRotationOscEnabled);
+          setTileSpreadOscEnabled(s.tileSpreadOscEnabled);
+
+          pendingSettingsRef.current = null;
+        }
+
+        timelineTransitionFrameRef.current++;
+      }
+
+      // Draw transition timer in top right
+      if ((isManualTransitioning && !isPaused) || isTimelineTransitioning) {
+        const progress = isTimelineTransitioning ? timelineTransitionProgress : transitionProgress;
+        const remainingTime = TRANSITION_DURATION * (1 - progress);
+        const label = isTimelineTransitioning ? 'Timeline' : 'Transition';
         ctx.save();
         ctx.resetTransform(); // Reset any transformations
         ctx.fillStyle = '#ffffff';
@@ -927,22 +1353,28 @@ export default function PenroseTiling() {
         ctx.font = 'bold 24px monospace';
         ctx.lineWidth = 4;
         ctx.textAlign = 'right';
-        ctx.textBaseline = 'bottom';
-        const text = `Transition: ${remainingTime.toFixed(1)}s`;
+        ctx.textBaseline = 'top';
+        const text = `${label}: ${remainingTime.toFixed(2)}s`;
         const x = window.innerWidth - 20;
-        const y = window.innerHeight - 20;
+        const y = 20;
         ctx.strokeText(text, x, y);
         ctx.fillText(text, x, y);
         ctx.restore();
       }
 
-      // Increment transition timer during transition
-      if (isTransitioning) {
+      // Increment manual transition timer during manual transition
+      if (isManualTransitioning) {
         transitionTimeRef.current += 0.016;
       }
 
+      // Increment timeline transition timer during timeline transition
+      if (isTimelineTransitioning) {
+        timelineTransitionTimeRef.current += 0.016;
+      }
+
       // Only increment time when not paused AND not transitioning
-      if (!isPausedRef.current && !isTransitioning) {
+      // Freeze time during timeline transitions so target state doesn't drift
+      if (!isPausedRef.current && !isManualTransitioning && !isTimelineTransitioning) {
         timeRef.current += 0.016;
       }
       animationRef.current = requestAnimationFrame(animate);
@@ -991,18 +1423,38 @@ export default function PenroseTiling() {
           background: "rgba(0, 0, 0, 0.7)",
           padding: "20px",
           borderRadius: "8px",
-          minWidth: "250px",
+          width: "250px",
           maxHeight: "90vh",
           overflowY: "auto",
         }}
       >
-        <div style={{ marginBottom: "20px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
-          <a href="/" style={{ fontSize: "12px", color: "#4488ff", textDecoration: "none" }}>← Gallery</a>
-          <h2 style={{ margin: "8px 0 0 0", fontSize: "18px", color: "#fff" }}>
-            Penrose Tiling
-          </h2>
+        <div style={{ marginBottom: isControlPanelCollapsed ? "0" : "20px", paddingBottom: isControlPanelCollapsed ? "0" : "15px", borderBottom: isControlPanelCollapsed ? "none" : "1px solid #444", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <a href="/" style={{ fontSize: "12px", color: "#4488ff", textDecoration: "none" }}>← Gallery</a>
+            <h2 style={{ margin: "8px 0 0 0", fontSize: "18px", color: "#fff" }}>
+              Penrose Tiling
+            </h2>
+          </div>
+          <button
+            onClick={() => setIsControlPanelCollapsed(!isControlPanelCollapsed)}
+            style={{
+              background: "transparent",
+              border: "1px solid #555",
+              borderRadius: "4px",
+              color: "#fff",
+              cursor: "pointer",
+              fontSize: "16px",
+              padding: "4px 8px",
+              marginLeft: "10px",
+            }}
+            title={isControlPanelCollapsed ? "Expand controls" : "Collapse controls"}
+          >
+            {isControlPanelCollapsed ? "▼" : "▲"}
+          </button>
         </div>
 
+        {!isControlPanelCollapsed && (
+        <>
         <div style={{ marginBottom: "20px" }}>
           <button
             onClick={toggleAllOscillators}
@@ -1814,6 +2266,174 @@ export default function PenroseTiling() {
               </div>
             </div>
           )}
+        </div>
+        </>
+        )}
+      </div>
+      )}
+
+      {/* Timeline */}
+      {!isPreview && (
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: `${timelineHeight}px`,
+          background: "rgba(0, 0, 0, 0.9)",
+          borderTop: "1px solid #333",
+          padding: "15px 20px",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Resize handle */}
+        <div
+          onMouseDown={() => setIsResizingTimeline(true)}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "6px",
+            cursor: "ns-resize",
+            background: isResizingTimeline ? "#4488ff" : "transparent",
+            transition: "background 0.2s",
+          }}
+          onMouseEnter={(e) => {
+            if (!isResizingTimeline) {
+              e.currentTarget.style.background = "rgba(68, 136, 255, 0.3)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isResizingTimeline) {
+              e.currentTarget.style.background = "transparent";
+            }
+          }}
+        />
+        <div style={{ marginBottom: "10px", display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            onClick={saveSettingState}
+            style={{
+              padding: "8px 16px",
+              background: "#4488ff",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: "600",
+            }}
+          >
+            Save Setting State
+          </button>
+          <button
+            onClick={saveTileState}
+            style={{
+              padding: "8px 16px",
+              background: "#ffaa44",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: "600",
+            }}
+          >
+            Save Tile State
+          </button>
+          <button
+            onClick={() => setIsTimelinePlaying(!isTimelinePlaying)}
+            style={{
+              padding: "8px 16px",
+              background: isTimelinePlaying ? "#ff4444" : "#44cc88",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: "600",
+            }}
+          >
+            {isTimelinePlaying ? "⏸ Pause" : "▶ Play"}
+          </button>
+          <button
+            onClick={() => {
+              setTimelinePosition(0);
+              setIsTimelinePlaying(false);
+              processedKeyframesRef.current.clear();
+            }}
+            style={{
+              padding: "8px 16px",
+              background: "#666",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: "600",
+            }}
+          >
+            ↺ Reset
+          </button>
+          <span style={{ color: "#aaa", fontSize: "12px", marginLeft: "auto" }}>
+            {timelinePosition.toFixed(1)}s / {timelineDuration}s
+          </span>
+        </div>
+
+        {/* Timeline track */}
+        <div
+          style={{
+            position: "relative",
+            height: "40px",
+            background: "#222",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const newTime = (x / rect.width) * timelineDuration;
+            setTimelinePosition(newTime);
+          }}
+        >
+          {/* Keyframes */}
+          {keyframes.map((kf) => (
+            <div
+              key={kf.id}
+              style={{
+                position: "absolute",
+                left: `${(kf.time / timelineDuration) * 100}%`,
+                top: "5px",
+                width: "8px",
+                height: "30px",
+                background: kf.type === "setting" ? "#4488ff" : "#ffaa44",
+                borderRadius: "2px",
+                cursor: "pointer",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (e.shiftKey) {
+                  removeKeyframe(kf.id);
+                }
+              }}
+              title={`${kf.type === "setting" ? "Setting" : "Tile"} keyframe at ${kf.time.toFixed(1)}s (Shift+Click to remove)`}
+            />
+          ))}
+
+          {/* Playhead */}
+          <div
+            style={{
+              position: "absolute",
+              left: `${(timelinePosition / timelineDuration) * 100}%`,
+              top: 0,
+              width: "2px",
+              height: "100%",
+              background: "#fff",
+              pointerEvents: "none",
+            }}
+          />
         </div>
       </div>
       )}
