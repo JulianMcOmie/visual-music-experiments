@@ -394,6 +394,8 @@ export default function PenroseTiling() {
   const [isControlPanelCollapsed, setIsControlPanelCollapsed] = useState(false);
   const [timelineHeight, setTimelineHeight] = useState(100);
   const [isResizingTimeline, setIsResizingTimeline] = useState(false);
+  const [draggedKeyframeId, setDraggedKeyframeId] = useState<string | null>(null);
+  const [isDraggingKeyframe, setIsDraggingKeyframe] = useState(false);
 
   const animationRef = useRef<number | undefined>(undefined);
   const timeRef = useRef<number>(0);
@@ -555,6 +557,25 @@ export default function PenroseTiling() {
     setKeyframes(prev => prev.filter(kf => kf.id !== id));
   };
 
+  const updateKeyframeTime = (id: string, newTime: number) => {
+    setKeyframes(prev =>
+      prev.map(kf => kf.id === id ? { ...kf, time: Math.max(0, Math.min(timelineDuration, newTime)) } : kf)
+        .sort((a, b) => a.time - b.time)
+    );
+  };
+
+  const duplicateKeyframe = (id: string, newTime: number) => {
+    const keyframe = keyframes.find(kf => kf.id === id);
+    if (!keyframe) return;
+
+    const newKeyframe = {
+      ...keyframe,
+      id: `${keyframe.type}-${Date.now()}`,
+      time: Math.max(0, Math.min(timelineDuration, newTime)),
+    };
+    setKeyframes(prev => [...prev, newKeyframe].sort((a, b) => a.time - b.time));
+  };
+
   const toggleAllOscillators = () => {
     if (!isPausedRef.current) {
       // Pausing - stop time and capture visual state
@@ -697,6 +718,58 @@ export default function PenroseTiling() {
       document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isResizingTimeline]);
+
+  // Keyframe drag handler
+  useEffect(() => {
+    if (!isDraggingKeyframe || !draggedKeyframeId) return;
+
+    let wasOptionHeld = false;
+    let hasMoved = false;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      hasMoved = true;
+      wasOptionHeld = e.altKey || e.metaKey;
+
+      // Find the timeline track element
+      const timelineTrack = document.querySelector('[data-timeline-track="true"]');
+      if (!timelineTrack) return;
+
+      const rect = timelineTrack.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const newTime = (x / rect.width) * timelineDuration;
+
+      if (wasOptionHeld) {
+        // Preview copy position (handled in render)
+      } else {
+        // Update original position
+        updateKeyframeTime(draggedKeyframeId, newTime);
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (hasMoved && wasOptionHeld) {
+        // Create a copy at the new position
+        const timelineTrack = document.querySelector('[data-timeline-track="true"]');
+        if (timelineTrack) {
+          const rect = timelineTrack.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const newTime = (x / rect.width) * timelineDuration;
+          duplicateKeyframe(draggedKeyframeId, newTime);
+        }
+      }
+
+      setIsDraggingKeyframe(false);
+      setDraggedKeyframeId(null);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDraggingKeyframe, draggedKeyframeId, timelineDuration]);
 
   // Clear cache when layers setting changes manually
   useEffect(() => {
@@ -2384,6 +2457,7 @@ export default function PenroseTiling() {
 
         {/* Timeline track */}
         <div
+          data-timeline-track="true"
           style={{
             position: "relative",
             height: "40px",
@@ -2392,6 +2466,9 @@ export default function PenroseTiling() {
             cursor: "pointer",
           }}
           onClick={(e) => {
+            // Don't scrub if we're dragging a keyframe
+            if (isDraggingKeyframe) return;
+
             const rect = e.currentTarget.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const newTime = (x / rect.width) * timelineDuration;
@@ -2410,15 +2487,24 @@ export default function PenroseTiling() {
                 height: "30px",
                 background: kf.type === "setting" ? "#4488ff" : "#ffaa44",
                 borderRadius: "2px",
-                cursor: "pointer",
+                cursor: isDraggingKeyframe && draggedKeyframeId === kf.id ? "grabbing" : "grab",
+                opacity: isDraggingKeyframe && draggedKeyframeId === kf.id ? 0.5 : 1,
+                zIndex: isDraggingKeyframe && draggedKeyframeId === kf.id ? 10 : 1,
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                if (!e.shiftKey) {
+                  setDraggedKeyframeId(kf.id);
+                  setIsDraggingKeyframe(true);
+                }
               }}
               onClick={(e) => {
                 e.stopPropagation();
-                if (e.shiftKey) {
+                if (e.shiftKey && !isDraggingKeyframe) {
                   removeKeyframe(kf.id);
                 }
               }}
-              title={`${kf.type === "setting" ? "Setting" : "Tile"} keyframe at ${kf.time.toFixed(1)}s (Shift+Click to remove)`}
+              title={`${kf.type === "setting" ? "Setting" : "Tile"} keyframe at ${kf.time.toFixed(1)}s (Drag to move, Option+Drag to copy, Shift+Click to remove)`}
             />
           ))}
 
