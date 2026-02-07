@@ -223,6 +223,7 @@ function hslToHex(h: number, s: number, l: number): string {
 
 export default function PenroseTiling() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isPreview, setIsPreview] = useState(false);
   const [masterOscEnabled, setMasterOscEnabled] = useState(true);
   const isPausedRef = useRef(false);
   const [layers, setLayers] = useState(7);
@@ -418,6 +419,28 @@ export default function PenroseTiling() {
       }, 16);
     }
   };
+
+  // Check for preview mode
+  useEffect(() => {
+    if (window.location.search.includes("preview")) {
+      setIsPreview(true);
+      isPausedRef.current = true;
+    }
+  }, []);
+
+  // Handle play/pause messages from gallery
+  useEffect(() => {
+    if (!isPreview) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data === "play") {
+        isPausedRef.current = false;
+      } else if (e.data === "pause") {
+        isPausedRef.current = true;
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [isPreview]);
 
   // Clear cache when layers setting changes manually
   useEffect(() => {
@@ -959,6 +982,7 @@ export default function PenroseTiling() {
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       <canvas ref={canvasRef} style={{ display: "block" }} />
 
+      {!isPreview && (
       <div
         style={{
           position: "absolute",
@@ -1792,6 +1816,7 @@ export default function PenroseTiling() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
