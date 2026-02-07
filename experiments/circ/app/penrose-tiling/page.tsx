@@ -381,6 +381,10 @@ export default function PenroseTiling() {
   const [delayFunctionPowerOscCustomCosWeight, setDelayFunctionPowerOscCustomCosWeight] = useState(0.5);
   const [delayFunctionPowerOscCustomCosFreq, setDelayFunctionPowerOscCustomCosFreq] = useState(1);
 
+  // Interpolation delay settings
+  const [interpolationDelayMode, setInterpolationDelayMode] = useState<DelayMode>("distance");
+  const [interpolationDelayAmount, setInterpolationDelayAmount] = useState(0.5); // 0 = all start together, 1 = maximum stagger
+
   // Timeline state
   const [keyframes, setKeyframes] = useState<Keyframe[]>([]);
   const [timelinePosition, setTimelinePosition] = useState(0);
@@ -1255,7 +1259,21 @@ export default function PenroseTiling() {
           if (timelineFrozenStatesRef.current.has(tileIndex) && timelineTargetStatesRef.current.has(tileIndex)) {
             const frozenState = timelineFrozenStatesRef.current.get(tileIndex)!;
             const targetState = timelineTargetStatesRef.current.get(tileIndex)!;
-            const easedProgress = timelineTransitionProgress * timelineTransitionProgress * (3 - 2 * timelineTransitionProgress);
+
+            // Calculate per-tile delay factor (0 to interpolationDelayAmount)
+            const delayValue = calculateDelayValue(tile, interpolationDelayMode, maxGeneration, currentAngleOffset, currentDelayModeParam);
+            const normalizedDelay = delayValue / maxGeneration; // 0 to 1
+            const tileDelayFactor = normalizedDelay * Math.min(0.99, interpolationDelayAmount); // Cap at 0.99 to avoid division by zero
+
+            // Each tile starts at tileDelayFactor and finishes at 1.0
+            // tileProgress = 0 when globalProgress = tileDelayFactor
+            // tileProgress = 1 when globalProgress = 1.0
+            let tileProgress = 0;
+            if (timelineTransitionProgress >= tileDelayFactor) {
+              tileProgress = (timelineTransitionProgress - tileDelayFactor) / (1 - tileDelayFactor);
+            }
+
+            const easedProgress = tileProgress * tileProgress * (3 - 2 * tileProgress); // smoothstep
 
             // Interpolate all values
             tileLevelSpread = frozenState.spread + (targetState.spread - frozenState.spread) * easedProgress;
@@ -1780,6 +1798,50 @@ export default function PenroseTiling() {
           />
           <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
             Spiral: tightness | Radial: sector power
+          </div>
+        </div>
+
+        {/* Interpolation Delay Settings */}
+        <div style={{ borderTop: "1px solid #444", paddingTop: "20px", marginTop: "20px", marginBottom: "20px" }}>
+          <div style={{ fontSize: "13px", color: "#aaa", marginBottom: "12px", fontWeight: "500" }}>
+            Interpolation Delay
+          </div>
+
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+              Interpolation Mode
+            </label>
+            <select
+              value={interpolationDelayMode}
+              onChange={(e) => setInterpolationDelayMode(e.target.value as DelayMode)}
+              style={{ width: "100%", padding: "8px", borderRadius: "4px", background: "#222", color: "#fff", border: "1px solid #444", cursor: "pointer" }}
+            >
+              <option value="distance">Distance (radial from center)</option>
+              <option value="angle">Angle (rotating sweep)</option>
+              <option value="spiral">Spiral (combined distance + angle)</option>
+              <option value="radial">Radial (distance × angle sectors)</option>
+            </select>
+            <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+              Pattern for staggering tile interpolation timing
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+              Interpolation Stagger: {interpolationDelayAmount.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="0.95"
+              step="0.05"
+              value={interpolationDelayAmount}
+              onChange={(e) => setInterpolationDelayAmount(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+            <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+              0 = all tiles start together | Higher = more stagger
+            </div>
           </div>
         </div>
 
