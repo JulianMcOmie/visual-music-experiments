@@ -29,6 +29,13 @@ const projects = [
     color: "#44cc88",
     bgColor: "#000510",
   },
+  {
+    title: "Penrose Tiling",
+    href: "/penrose-tiling",
+    description: "Aperiodic P2 Penrose tiling with per-tile oscillators, spiral delay modes, and smooth pause/resume interpolation.",
+    color: "#ffaa44",
+    bgColor: "#050505",
+  },
 ];
 
 export default function Gallery() {
