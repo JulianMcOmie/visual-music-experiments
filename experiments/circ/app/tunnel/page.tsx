@@ -405,9 +405,12 @@ export default function Tunnel() {
           overflowY: "auto",
         }}
       >
-        <h2 style={{ margin: "0 0 20px 0", fontSize: "18px", color: "#fff" }}>
-          Warp Speed Controls
-        </h2>
+        <div style={{ marginBottom: "20px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
+          <a href="/" style={{ fontSize: "12px", color: "#ff6644", textDecoration: "none" }}>← Gallery</a>
+          <h2 style={{ margin: "8px 0 0 0", fontSize: "18px", color: "#fff" }}>
+            Warp Speed Tunnel
+          </h2>
+        </div>
 
         <div style={{ marginBottom: "20px" }}>
           <label
@@ -839,10 +842,6 @@ export default function Tunnel() {
             </div>
           </div>
         </details>
-
-        <div style={{ fontSize: "12px", color: "#aaa", marginTop: "20px" }}>
-          <a href="/" style={{ color: "#4488ff" }}>← Gallery</a>
-        </div>
       </div>
       )}
     </div>

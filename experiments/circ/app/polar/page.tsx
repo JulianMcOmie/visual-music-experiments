@@ -568,9 +568,12 @@ export default function PolarVisualizer() {
           display: showControls ? "block" : "none",
         }}
       >
-        <h2 style={{ margin: "0 0 20px 0", fontSize: "18px", color: "#fff" }}>
-          3D Polar Functions
-        </h2>
+        <div style={{ marginBottom: "20px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
+          <a href="/" style={{ fontSize: "12px", color: "#aa66ff", textDecoration: "none" }}>← Gallery</a>
+          <h2 style={{ margin: "8px 0 0 0", fontSize: "18px", color: "#fff" }}>
+            3D Polar Functions
+          </h2>
+        </div>
 
         <div style={{ marginBottom: "15px" }}>
           <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "#fff" }}>
@@ -1003,10 +1006,6 @@ export default function PolarVisualizer() {
             <input type="range" min="0.01" max="1" step="0.01" value={timeDelayOscMax} onChange={(e) => setTimeDelayOscMax(Number(e.target.value))} style={{ width: "100%", marginBottom: "6px" }} />
           </div>
         </details>
-
-        <div style={{ fontSize: "12px", color: "#aaa", marginTop: "20px" }}>
-          <a href="/" style={{ color: "#4488ff" }}>← Gallery</a>
-        </div>
       </div>
 
       {/* Toggle button */}
