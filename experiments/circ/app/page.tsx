@@ -2,14 +2,14 @@
 
 const projects = [
   {
-    title: "Circle Animation",
+    title: "Polar Functions",
     href: "/circle",
     description: "Layered polar wave patterns with rotated shape overlays, concentric rings, and oscillating parameters.",
     color: "#4488ff",
     bgColor: "#0a0a0a",
   },
   {
-    title: "Polar Functions",
+    title: "3D Polar Functions",
     href: "/polar",
     description: "3D rose, spiral, cardioid, lemniscate, and limaçon curves with depth layers and color palettes.",
     color: "#aa66ff",

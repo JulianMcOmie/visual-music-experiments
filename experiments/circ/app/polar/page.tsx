@@ -569,7 +569,7 @@ export default function PolarVisualizer() {
         }}
       >
         <h2 style={{ margin: "0 0 20px 0", fontSize: "18px", color: "#fff" }}>
-          Polar Functions
+          3D Polar Functions
         </h2>
 
         <div style={{ marginBottom: "15px" }}>

@@ -476,7 +476,7 @@ export default function Home() {
         <div style={{ marginBottom: "20px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
           <a href="/" style={{ fontSize: "12px", color: "#4488ff", textDecoration: "none" }}>← Gallery</a>
           <h2 style={{ margin: "8px 0 0 0", fontSize: "18px", color: "#fff" }}>
-            Circle Animation
+            Polar Functions
           </h2>
         </div>
 
