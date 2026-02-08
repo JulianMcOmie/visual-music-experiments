@@ -7,6 +7,7 @@ const projects = [
     description: "Layered polar wave patterns with rotated shape overlays, concentric rings, and oscillating parameters.",
     color: "#4488ff",
     bgColor: "#0a0a0a",
+    snapshot: "/snapshots/polar-functions.png",
   },
   {
     title: "3D Polar Functions",
@@ -14,6 +15,7 @@ const projects = [
     description: "3D rose, spiral, cardioid, lemniscate, and limaçon curves with depth layers and color palettes.",
     color: "#aa66ff",
     bgColor: "#000510",
+    snapshot: "/snapshots/3d-polar-functions.png",
   },
   {
     title: "Warp Speed Tunnel",
@@ -21,6 +23,7 @@ const projects = [
     description: "First-person flight through an infinite procedural tunnel with color-shifting rings.",
     color: "#ff6644",
     bgColor: "#000508",
+    snapshot: "/snapshots/warp-speed-tunnel.png",
   },
   {
     title: "Cube Tube",
@@ -28,6 +31,7 @@ const projects = [
     description: "A tube of rotating cubes stretching into depth, with oscillation-driven color and movement.",
     color: "#44cc88",
     bgColor: "#000510",
+    snapshot: "/snapshots/cube-tube.png",
   },
   {
     title: "Penrose Tiling",
@@ -35,6 +39,7 @@ const projects = [
     description: "Aperiodic P2 Penrose tiling with per-tile oscillators, spiral delay modes, and smooth pause/resume interpolation.",
     color: "#ffaa44",
     bgColor: "#050505",
+    snapshot: "/snapshots/penrose-tiling.png",
   },
 ];
 
@@ -99,21 +104,17 @@ export default function Gallery() {
                 overflow: "hidden",
                 borderRadius: "8px",
                 height: "160px",
-                background: `radial-gradient(circle at 30% 40%, ${project.color}40, ${project.bgColor} 70%)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                background: project.bgColor,
                 position: "relative"
               }}
             >
-              <div
+              <img
+                src={project.snapshot}
+                alt={project.title}
                 style={{
-                  width: "60px",
-                  height: "60px",
-                  borderRadius: "50%",
-                  background: project.color,
-                  opacity: 0.3,
-                  boxShadow: `0 0 40px ${project.color}`
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover"
                 }}
               />
             </div>
