@@ -9,7 +9,14 @@ const projects = [
 ];
 
 async function captureSnapshots() {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({
+    args: [
+      '--use-gl=angle',
+      '--use-angle=swiftshader',
+      '--disable-gpu-sandbox',
+      '--ignore-gpu-blocklist'
+    ]
+  });
   const context = await browser.newContext({
     viewport: { width: 800, height: 600 }
   });
@@ -24,7 +31,15 @@ async function captureSnapshots() {
       timeout: 30000
     });
 
-    // Wait a bit for the animation to render
+    // Wait for initial render
+    await page.waitForTimeout(1000);
+
+    // Start the animation by sending play message
+    await page.evaluate(() => {
+      window.postMessage('play', '*');
+    });
+
+    // Wait for animation to render a few frames
     await page.waitForTimeout(2000);
 
     // Take screenshot
