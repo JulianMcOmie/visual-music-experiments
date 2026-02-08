@@ -18,8 +18,8 @@ async function captureSnapshots() {
   for (const project of projects) {
     console.log(`Capturing ${project.name}...`);
 
-    // Navigate to the project page
-    await page.goto(`http://localhost:3000${project.path}`, {
+    // Navigate to the project page in preview mode (hides UI)
+    await page.goto(`http://localhost:3000${project.path}?preview`, {
       waitUntil: 'networkidle',
       timeout: 30000
     });
