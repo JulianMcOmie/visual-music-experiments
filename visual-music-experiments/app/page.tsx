@@ -18,8 +18,16 @@ const projects = [
     snapshot: "/snapshots/3d-polar-functions.png",
   },
   {
-    title: "Polar Bursts",
+    title: "3D Tunnel",
     href: "/tunnel",
+    description: "Hypnotic journey through an infinite 3D tunnel with colorful rings and customizable geometry.",
+    color: "#66ccff",
+    bgColor: "#000000",
+    snapshot: "/snapshots/3d-tunnel.png",
+  },
+  {
+    title: "Polar Bursts",
+    href: "/polar-bursts",
     description: "First-person flight through an infinite procedural tunnel with color-shifting rings.",
     color: "#ff6644",
     bgColor: "#000508",
