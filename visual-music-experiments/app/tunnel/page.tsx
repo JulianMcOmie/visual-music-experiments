@@ -15,6 +15,7 @@ const waveFunctions: Record<WaveFunction, (x: number) => number> = {
 export default function Tunnel3D() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [speed, setSpeed] = useState(2);
+  const [cameraRotation, setCameraRotation] = useState(0);
 
   // Generation constants - determine how new rings are created
   const [generationHue, setGenerationHue] = useState(180);
@@ -47,6 +48,12 @@ export default function Tunnel3D() {
   const [segmentsOscMin, setSegmentsOscMin] = useState(3);
   const [segmentsOscMax, setSegmentsOscMax] = useState(64);
 
+  const [cameraRotationOscEnabled, setCameraRotationOscEnabled] = useState(false);
+  const [cameraRotationOscFunction, setCameraRotationOscFunction] = useState<WaveFunction>("sin");
+  const [cameraRotationOscSpeed, setCameraRotationOscSpeed] = useState(1);
+  const [cameraRotationOscMin, setCameraRotationOscMin] = useState(0);
+  const [cameraRotationOscMax, setCameraRotationOscMax] = useState(Math.PI * 2);
+
   const [showControls, setShowControls] = useState(true);
   const [isPreview, setIsPreview] = useState(false);
   const pausedRef = useRef(false);
@@ -75,6 +82,7 @@ export default function Tunnel3D() {
   }, [isPreview]);
 
   const speedRef = useRef(speed);
+  const cameraRotationRef = useRef(cameraRotation);
   const generationHueRef = useRef(generationHue);
   const generationRadiusRef = useRef(generationRadius);
   const generationSpacingRef = useRef(generationSpacing);
@@ -105,9 +113,19 @@ export default function Tunnel3D() {
   const segmentsOscMinRef = useRef(segmentsOscMin);
   const segmentsOscMaxRef = useRef(segmentsOscMax);
 
+  const cameraRotationOscEnabledRef = useRef(cameraRotationOscEnabled);
+  const cameraRotationOscFunctionRef = useRef(cameraRotationOscFunction);
+  const cameraRotationOscSpeedRef = useRef(cameraRotationOscSpeed);
+  const cameraRotationOscMinRef = useRef(cameraRotationOscMin);
+  const cameraRotationOscMaxRef = useRef(cameraRotationOscMax);
+
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
+
+  useEffect(() => {
+    cameraRotationRef.current = cameraRotation;
+  }, [cameraRotation]);
 
   useEffect(() => {
     generationHueRef.current = generationHue;
@@ -156,6 +174,14 @@ export default function Tunnel3D() {
     segmentsOscMinRef.current = segmentsOscMin;
     segmentsOscMaxRef.current = segmentsOscMax;
   }, [segmentsOscEnabled, segmentsOscFunction, segmentsOscSpeed, segmentsOscMin, segmentsOscMax]);
+
+  useEffect(() => {
+    cameraRotationOscEnabledRef.current = cameraRotationOscEnabled;
+    cameraRotationOscFunctionRef.current = cameraRotationOscFunction;
+    cameraRotationOscSpeedRef.current = cameraRotationOscSpeed;
+    cameraRotationOscMinRef.current = cameraRotationOscMin;
+    cameraRotationOscMaxRef.current = cameraRotationOscMax;
+  }, [cameraRotationOscEnabled, cameraRotationOscFunction, cameraRotationOscSpeed, cameraRotationOscMin, cameraRotationOscMax]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -229,6 +255,17 @@ export default function Tunnel3D() {
     const animate = () => {
       if (!pausedRef.current) {
         time += 0.01 * speedRef.current;
+
+        // Apply camera rotation with oscillation
+        const currentCameraRotation = getOscillatedValue(
+          cameraRotationRef.current,
+          cameraRotationOscEnabledRef.current,
+          cameraRotationOscFunctionRef.current,
+          cameraRotationOscSpeedRef.current,
+          cameraRotationOscMinRef.current,
+          cameraRotationOscMaxRef.current
+        );
+        camera.rotation.z = currentCameraRotation;
 
         // Move all rings forward toward camera first
         rings.forEach((ring) => {
@@ -411,6 +448,30 @@ export default function Tunnel3D() {
               step="0.01"
               value={speed}
               onChange={(e) => setSpeed(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              htmlFor="cameraRotation"
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                color: "#fff",
+              }}
+            >
+              Camera Rotation: {(cameraRotation * 180 / Math.PI).toFixed(0)}°
+            </label>
+            <input
+              id="cameraRotation"
+              type="range"
+              min="0"
+              max={Math.PI * 2}
+              step="0.01"
+              value={cameraRotation}
+              onChange={(e) => setCameraRotation(Number(e.target.value))}
               style={{ width: "100%" }}
             />
           </div>
@@ -649,6 +710,40 @@ export default function Tunnel3D() {
                 <label style={{ display: "block", fontSize: "12px" }}>
                   Max: {segmentsOscMax}
                   <input type="range" min="3" max="64" step="1" value={segmentsOscMax} onChange={(e) => setSegmentsOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Camera Rotation Oscillator */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Camera Rotation Oscillator {cameraRotationOscEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={cameraRotationOscEnabled} onChange={(e) => setCameraRotationOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={cameraRotationOscFunction} onChange={(e) => setCameraRotationOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
+                    <option value="sin">Sin</option>
+                    <option value="cos">Cos</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {cameraRotationOscSpeed.toFixed(2)}
+                  <input type="range" min="0.1" max="5" step="0.1" value={cameraRotationOscSpeed} onChange={(e) => setCameraRotationOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {(cameraRotationOscMin * 180 / Math.PI).toFixed(0)}°
+                  <input type="range" min="0" max={Math.PI * 2} step="0.01" value={cameraRotationOscMin} onChange={(e) => setCameraRotationOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {(cameraRotationOscMax * 180 / Math.PI).toFixed(0)}°
+                  <input type="range" min="0" max={Math.PI * 2} step="0.01" value={cameraRotationOscMax} onChange={(e) => setCameraRotationOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
               </div>
             </details>

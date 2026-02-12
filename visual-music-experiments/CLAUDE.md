@@ -139,7 +139,7 @@ chromium.launch({
 
 ## Git Conventions
 
-- **Do NOT auto-commit or auto-push**: Never commit or push changes unless explicitly requested by the user
+- **CRITICAL: NEVER auto-commit or auto-push**: ONLY commit and/or push when the user explicitly says "commit", "commit and push", "push", or similar. Do NOT commit automatically after completing work. Wait for explicit instruction.
 - **Commit messages**: Use clear, descriptive messages without co-author tags
 - **No Claude references**: Don't include "Co-Authored-By: Claude" in commits
 - Example: "Add timeline keyframes with oscillator variations"
