@@ -14,6 +14,11 @@ export default function Tunnel3D() {
   const [isPreview, setIsPreview] = useState(false);
   const pausedRef = useRef(false);
 
+  // Debug values
+  const [debugTime, setDebugTime] = useState(0);
+  const [debugRingZ, setDebugRingZ] = useState(0);
+  const [debugHue, setDebugHue] = useState(0);
+
   useEffect(() => {
     if (window.location.search.includes("preview")) {
       setIsPreview(true);
@@ -99,6 +104,7 @@ export default function Tunnel3D() {
     }
 
     let time = 0;
+    let frameCount = 0;
 
     const animate = () => {
       if (!pausedRef.current) {
@@ -110,7 +116,10 @@ export default function Tunnel3D() {
 
           // Reset ring to the back when it passes the camera
           if (ring.position.z > 5) {
-            ring.position.z = -numRings * ringSpacingRef.current;
+            // Find the furthest back ring
+            const minZ = Math.min(...rings.map(r => r.position.z));
+            // Place this ring one spacing behind the furthest ring
+            ring.position.z = minZ - ringSpacingRef.current;
           }
 
           // Update color
@@ -120,6 +129,13 @@ export default function Tunnel3D() {
             0.8,
             0.5
           );
+
+          // Update debug values every 5 frames
+          if (i === 0 && frameCount % 5 === 0) {
+            setDebugTime(time);
+            setDebugRingZ(ring.position.z);
+            setDebugHue(hue);
+          }
 
           // Update geometry if segments changed
           if ((ring.geometry as THREE.TorusGeometry).parameters.radialSegments !== segmentsRef.current) {
@@ -144,6 +160,8 @@ export default function Tunnel3D() {
             );
           }
         });
+
+        frameCount++;
       }
 
       renderer.render(scene, camera);
@@ -174,6 +192,29 @@ export default function Tunnel3D() {
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+
+      {/* Debug display - top right */}
+      {!isPreview && (
+        <div
+          style={{
+            position: "absolute",
+            top: "20px",
+            right: "20px",
+            background: "rgba(0, 0, 0, 0.7)",
+            color: "#66ccff",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            fontFamily: "monospace",
+            fontSize: "12px",
+            lineHeight: "1.6",
+            border: "1px solid rgba(102, 204, 255, 0.3)",
+          }}
+        >
+          <div>Time: {debugTime.toFixed(2)}</div>
+          <div>Ring Z: {debugRingZ.toFixed(2)}</div>
+          <div>Hue: {debugHue.toFixed(0)}°</div>
+        </div>
+      )}
 
       {showControls && (
         <div
