@@ -6,10 +6,13 @@ import * as THREE from "three";
 export default function Tunnel3D() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [speed, setSpeed] = useState(2);
-  const [tunnelRadius, setTunnelRadius] = useState(5);
-  const [segments, setSegments] = useState(32);
-  const [ringSpacing, setRingSpacing] = useState(2);
-  const [hueShift, setHueShift] = useState(180);
+
+  // Generation constants - determine how new rings are created
+  const [generationHue, setGenerationHue] = useState(180);
+  const [generationRadius, setGenerationRadius] = useState(5);
+  const [generationSpacing, setGenerationSpacing] = useState(2);
+  const [generationSegments, setGenerationSegments] = useState(32);
+
   const [showControls, setShowControls] = useState(true);
   const [isPreview, setIsPreview] = useState(false);
   const pausedRef = useRef(false);
@@ -38,30 +41,30 @@ export default function Tunnel3D() {
   }, [isPreview]);
 
   const speedRef = useRef(speed);
-  const tunnelRadiusRef = useRef(tunnelRadius);
-  const segmentsRef = useRef(segments);
-  const ringSpacingRef = useRef(ringSpacing);
-  const hueShiftRef = useRef(hueShift);
+  const generationHueRef = useRef(generationHue);
+  const generationRadiusRef = useRef(generationRadius);
+  const generationSpacingRef = useRef(generationSpacing);
+  const generationSegmentsRef = useRef(generationSegments);
 
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
 
   useEffect(() => {
-    tunnelRadiusRef.current = tunnelRadius;
-  }, [tunnelRadius]);
+    generationHueRef.current = generationHue;
+  }, [generationHue]);
 
   useEffect(() => {
-    segmentsRef.current = segments;
-  }, [segments]);
+    generationRadiusRef.current = generationRadius;
+  }, [generationRadius]);
 
   useEffect(() => {
-    ringSpacingRef.current = ringSpacing;
-  }, [ringSpacing]);
+    generationSpacingRef.current = generationSpacing;
+  }, [generationSpacing]);
 
   useEffect(() => {
-    hueShiftRef.current = hueShift;
-  }, [hueShift]);
+    generationSegmentsRef.current = generationSegments;
+  }, [generationSegments]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -87,18 +90,28 @@ export default function Tunnel3D() {
 
     for (let i = 0; i < numRings; i++) {
       const geometry = new THREE.TorusGeometry(
-        tunnelRadiusRef.current,
+        generationRadiusRef.current,
         0.2,
         16,
-        segmentsRef.current
+        generationSegmentsRef.current
       );
-      const hue = (i * 10 + hueShiftRef.current) % 360;
+      const hue = (i * 10 + generationHueRef.current) % 360;
       const material = new THREE.MeshBasicMaterial({
         color: new THREE.Color().setHSL(hue / 360, 0.8, 0.5),
         wireframe: false,
       });
       const ring = new THREE.Mesh(geometry, material);
-      ring.position.z = -i * ringSpacingRef.current;
+      ring.position.z = -i * generationSpacingRef.current;
+
+      // Bake ring properties from generation constants
+      ring.userData = {
+        radius: generationRadiusRef.current,
+        segments: generationSegmentsRef.current,
+        hue: hue,
+        spacing: generationSpacingRef.current,
+        birthIndex: i,
+      };
+
       scene.add(ring);
       rings.push(ring);
     }
@@ -110,7 +123,7 @@ export default function Tunnel3D() {
       if (!pausedRef.current) {
         time += 0.01 * speedRef.current;
 
-        // Move rings forward
+        // Move rings forward toward camera
         rings.forEach((ring, i) => {
           ring.position.z += 0.1 * speedRef.current;
 
@@ -118,46 +131,43 @@ export default function Tunnel3D() {
           if (ring.position.z > 5) {
             // Find the furthest back ring
             const minZ = Math.min(...rings.map(r => r.position.z));
-            // Place this ring one spacing behind the furthest ring
-            ring.position.z = minZ - ringSpacingRef.current;
-          }
+            // Place this ring using current generation spacing constant
+            ring.position.z = minZ - generationSpacingRef.current;
 
-          // Update color
-          const hue = (i * 10 + time * 50 + hueShiftRef.current) % 360;
-          (ring.material as THREE.MeshBasicMaterial).color.setHSL(
-            hue / 360,
-            0.8,
-            0.5
-          );
+            // Regenerate with current generation constants
+            ring.geometry.dispose();
+            ring.geometry = new THREE.TorusGeometry(
+              generationRadiusRef.current,
+              0.2,
+              16,
+              generationSegmentsRef.current
+            );
+
+            // Calculate new hue from generation constant
+            const newHue = (ring.userData.birthIndex * 10 + generationHueRef.current) % 360;
+
+            // Bake generation constants into ring
+            ring.userData = {
+              radius: generationRadiusRef.current,
+              segments: generationSegmentsRef.current,
+              hue: newHue,
+              spacing: generationSpacingRef.current,
+              birthIndex: ring.userData.birthIndex,
+            };
+
+            // Set the color to the new baked hue
+            (ring.material as THREE.MeshBasicMaterial).color.setHSL(
+              newHue / 360,
+              0.8,
+              0.5
+            );
+          }
 
           // Update debug values every 5 frames
           if (i === 0 && frameCount % 5 === 0) {
             setDebugTime(time);
             setDebugRingZ(ring.position.z);
-            setDebugHue(hue);
-          }
-
-          // Update geometry if segments changed
-          if ((ring.geometry as THREE.TorusGeometry).parameters.radialSegments !== segmentsRef.current) {
-            ring.geometry.dispose();
-            ring.geometry = new THREE.TorusGeometry(
-              tunnelRadiusRef.current,
-              0.2,
-              16,
-              segmentsRef.current
-            );
-          }
-
-          // Update radius
-          const currentRadius = (ring.geometry as THREE.TorusGeometry).parameters.radius;
-          if (Math.abs(currentRadius - tunnelRadiusRef.current) > 0.1) {
-            ring.geometry.dispose();
-            ring.geometry = new THREE.TorusGeometry(
-              tunnelRadiusRef.current,
-              0.2,
-              16,
-              segmentsRef.current
-            );
+            setDebugHue(ring.userData.hue);
           }
         });
 
@@ -264,7 +274,7 @@ export default function Tunnel3D() {
 
           <div style={{ marginBottom: "20px" }}>
             <label
-              htmlFor="tunnelRadius"
+              htmlFor="generationRadius"
               style={{
                 display: "block",
                 marginBottom: "8px",
@@ -272,23 +282,23 @@ export default function Tunnel3D() {
                 color: "#fff",
               }}
             >
-              Tunnel Radius: {tunnelRadius.toFixed(1)}
+              Ring Radius: {generationRadius.toFixed(1)}
             </label>
             <input
-              id="tunnelRadius"
+              id="generationRadius"
               type="range"
               min="2"
               max="15"
               step="0.01"
-              value={tunnelRadius}
-              onChange={(e) => setTunnelRadius(Number(e.target.value))}
+              value={generationRadius}
+              onChange={(e) => setGenerationRadius(Number(e.target.value))}
               style={{ width: "100%" }}
             />
           </div>
 
           <div style={{ marginBottom: "20px" }}>
             <label
-              htmlFor="segments"
+              htmlFor="generationSegments"
               style={{
                 display: "block",
                 marginBottom: "8px",
@@ -296,23 +306,23 @@ export default function Tunnel3D() {
                 color: "#fff",
               }}
             >
-              Segments: {segments}
+              Ring Segments: {generationSegments}
             </label>
             <input
-              id="segments"
+              id="generationSegments"
               type="range"
               min="3"
               max="64"
               step="1"
-              value={segments}
-              onChange={(e) => setSegments(Number(e.target.value))}
+              value={generationSegments}
+              onChange={(e) => setGenerationSegments(Number(e.target.value))}
               style={{ width: "100%" }}
             />
           </div>
 
           <div style={{ marginBottom: "20px" }}>
             <label
-              htmlFor="ringSpacing"
+              htmlFor="generationSpacing"
               style={{
                 display: "block",
                 marginBottom: "8px",
@@ -320,23 +330,23 @@ export default function Tunnel3D() {
                 color: "#fff",
               }}
             >
-              Ring Spacing: {ringSpacing.toFixed(1)}
+              Ring Spacing: {generationSpacing.toFixed(1)}
             </label>
             <input
-              id="ringSpacing"
+              id="generationSpacing"
               type="range"
               min="0.5"
               max="5"
               step="0.01"
-              value={ringSpacing}
-              onChange={(e) => setRingSpacing(Number(e.target.value))}
+              value={generationSpacing}
+              onChange={(e) => setGenerationSpacing(Number(e.target.value))}
               style={{ width: "100%" }}
             />
           </div>
 
           <div style={{ marginBottom: "20px" }}>
             <label
-              htmlFor="hueShift"
+              htmlFor="generationHue"
               style={{
                 display: "block",
                 marginBottom: "8px",
@@ -344,16 +354,16 @@ export default function Tunnel3D() {
                 color: "#fff",
               }}
             >
-              Hue Shift: {hueShift}°
+              Ring Hue: {generationHue}°
             </label>
             <input
-              id="hueShift"
+              id="generationHue"
               type="range"
               min="0"
               max="360"
               step="0.1"
-              value={hueShift}
-              onChange={(e) => setHueShift(Number(e.target.value))}
+              value={generationHue}
+              onChange={(e) => setGenerationHue(Number(e.target.value))}
               style={{ width: "100%" }}
             />
           </div>
