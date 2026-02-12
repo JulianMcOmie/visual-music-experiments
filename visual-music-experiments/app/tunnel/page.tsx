@@ -21,7 +21,8 @@ export default function Tunnel3D() {
   const [generationHue, setGenerationHue] = useState(180);
   const [generationRadius, setGenerationRadius] = useState(5);
   const [generationSpacing, setGenerationSpacing] = useState(2);
-  const [generationSegments, setGenerationSegments] = useState(32);
+  const [generationSegments, setGenerationSegments] = useState(3);
+  const [shapeRotation, setShapeRotation] = useState(0);
 
   // Oscillators for generation constants
   const [hueOscEnabled, setHueOscEnabled] = useState(false);
@@ -53,6 +54,12 @@ export default function Tunnel3D() {
   const [cameraRotationOscSpeed, setCameraRotationOscSpeed] = useState(1);
   const [cameraRotationOscMin, setCameraRotationOscMin] = useState(0);
   const [cameraRotationOscMax, setCameraRotationOscMax] = useState(Math.PI * 2);
+
+  const [shapeRotationOscEnabled, setShapeRotationOscEnabled] = useState(false);
+  const [shapeRotationOscFunction, setShapeRotationOscFunction] = useState<WaveFunction>("sin");
+  const [shapeRotationOscSpeed, setShapeRotationOscSpeed] = useState(1);
+  const [shapeRotationOscMin, setShapeRotationOscMin] = useState(0);
+  const [shapeRotationOscMax, setShapeRotationOscMax] = useState(Math.PI * 2);
 
   const [showControls, setShowControls] = useState(true);
   const [isPreview, setIsPreview] = useState(false);
@@ -87,6 +94,7 @@ export default function Tunnel3D() {
   const generationRadiusRef = useRef(generationRadius);
   const generationSpacingRef = useRef(generationSpacing);
   const generationSegmentsRef = useRef(generationSegments);
+  const shapeRotationRef = useRef(shapeRotation);
 
   // Oscillator refs
   const hueOscEnabledRef = useRef(hueOscEnabled);
@@ -119,6 +127,12 @@ export default function Tunnel3D() {
   const cameraRotationOscMinRef = useRef(cameraRotationOscMin);
   const cameraRotationOscMaxRef = useRef(cameraRotationOscMax);
 
+  const shapeRotationOscEnabledRef = useRef(shapeRotationOscEnabled);
+  const shapeRotationOscFunctionRef = useRef(shapeRotationOscFunction);
+  const shapeRotationOscSpeedRef = useRef(shapeRotationOscSpeed);
+  const shapeRotationOscMinRef = useRef(shapeRotationOscMin);
+  const shapeRotationOscMaxRef = useRef(shapeRotationOscMax);
+
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
@@ -126,6 +140,10 @@ export default function Tunnel3D() {
   useEffect(() => {
     cameraRotationRef.current = cameraRotation;
   }, [cameraRotation]);
+
+  useEffect(() => {
+    shapeRotationRef.current = shapeRotation;
+  }, [shapeRotation]);
 
   useEffect(() => {
     generationHueRef.current = generationHue;
@@ -184,6 +202,14 @@ export default function Tunnel3D() {
   }, [cameraRotationOscEnabled, cameraRotationOscFunction, cameraRotationOscSpeed, cameraRotationOscMin, cameraRotationOscMax]);
 
   useEffect(() => {
+    shapeRotationOscEnabledRef.current = shapeRotationOscEnabled;
+    shapeRotationOscFunctionRef.current = shapeRotationOscFunction;
+    shapeRotationOscSpeedRef.current = shapeRotationOscSpeed;
+    shapeRotationOscMinRef.current = shapeRotationOscMin;
+    shapeRotationOscMaxRef.current = shapeRotationOscMax;
+  }, [shapeRotationOscEnabled, shapeRotationOscFunction, shapeRotationOscSpeed, shapeRotationOscMin, shapeRotationOscMax]);
+
+  useEffect(() => {
     if (!containerRef.current) return;
 
     const scene = new THREE.Scene();
@@ -220,6 +246,7 @@ export default function Tunnel3D() {
       });
       const ring = new THREE.Mesh(geometry, material);
       ring.position.z = -i * generationSpacingRef.current;
+      ring.rotation.z = shapeRotationRef.current;
 
       // Bake ring properties from generation constants
       ring.userData = {
@@ -227,6 +254,7 @@ export default function Tunnel3D() {
         segments: generationSegmentsRef.current,
         hue: hue,
         spacing: generationSpacingRef.current,
+        shapeRotation: shapeRotationRef.current,
         birthIndex: i,
       };
 
@@ -312,6 +340,15 @@ export default function Tunnel3D() {
               segmentsOscMaxRef.current
             ));
 
+            const currentShapeRotation = getOscillatedValue(
+              shapeRotationRef.current,
+              shapeRotationOscEnabledRef.current,
+              shapeRotationOscFunctionRef.current,
+              shapeRotationOscSpeedRef.current,
+              shapeRotationOscMinRef.current,
+              shapeRotationOscMaxRef.current
+            );
+
             // Find the furthest back ring (after all movement is done)
             const minZ = Math.min(...rings.map(r => r.position.z));
             // Place this ring using oscillated spacing
@@ -326,12 +363,16 @@ export default function Tunnel3D() {
               currentSegments
             );
 
+            // Apply shape rotation
+            ring.rotation.z = currentShapeRotation;
+
             // Bake oscillated generation constants into ring
             ring.userData = {
               radius: currentRadius,
               segments: currentSegments,
               hue: currentHue,
               spacing: currentSpacing,
+              shapeRotation: currentShapeRotation,
               birthIndex: ring.userData.birthIndex,
             };
 
@@ -572,6 +613,30 @@ export default function Tunnel3D() {
             />
           </div>
 
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              htmlFor="shapeRotation"
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                color: "#fff",
+              }}
+            >
+              Shape Rotation: {(shapeRotation * 180 / Math.PI).toFixed(0)}°
+            </label>
+            <input
+              id="shapeRotation"
+              type="range"
+              min="0"
+              max={Math.PI * 2}
+              step="0.01"
+              value={shapeRotation}
+              onChange={(e) => setShapeRotation(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
           {/* Oscillators Section */}
           <div style={{ marginTop: "30px", paddingTop: "20px", borderTop: "1px solid #444" }}>
             <h3 style={{ margin: "0 0 15px 0", fontSize: "14px", color: "#66ccff", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -744,6 +809,40 @@ export default function Tunnel3D() {
                 <label style={{ display: "block", fontSize: "12px" }}>
                   Max: {(cameraRotationOscMax * 180 / Math.PI).toFixed(0)}°
                   <input type="range" min="0" max={Math.PI * 2} step="0.01" value={cameraRotationOscMax} onChange={(e) => setCameraRotationOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Shape Rotation Oscillator */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Shape Rotation Oscillator {shapeRotationOscEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={shapeRotationOscEnabled} onChange={(e) => setShapeRotationOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={shapeRotationOscFunction} onChange={(e) => setShapeRotationOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
+                    <option value="sin">Sin</option>
+                    <option value="cos">Cos</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {shapeRotationOscSpeed.toFixed(2)}
+                  <input type="range" min="0.1" max="5" step="0.1" value={shapeRotationOscSpeed} onChange={(e) => setShapeRotationOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {(shapeRotationOscMin * 180 / Math.PI).toFixed(0)}°
+                  <input type="range" min="0" max={Math.PI * 2} step="0.01" value={shapeRotationOscMin} onChange={(e) => setShapeRotationOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {(shapeRotationOscMax * 180 / Math.PI).toFixed(0)}°
+                  <input type="range" min="0" max={Math.PI * 2} step="0.01" value={shapeRotationOscMax} onChange={(e) => setShapeRotationOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
               </div>
             </details>
