@@ -23,7 +23,7 @@ const projects = [
     description: "First-person flight through an infinite procedural tunnel with color-shifting rings.",
     color: "#ff6644",
     bgColor: "#000508",
-    snapshot: "/snapshots/polar-bursts.png",
+    snapshot: "/snapshots/warp-speed-tunnel.png",
   },
   {
     title: "Cube Tube",
