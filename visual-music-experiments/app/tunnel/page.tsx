@@ -510,6 +510,149 @@ export default function Tunnel3D() {
               style={{ width: "100%" }}
             />
           </div>
+
+          {/* Oscillators Section */}
+          <div style={{ marginTop: "30px", paddingTop: "20px", borderTop: "1px solid #444" }}>
+            <h3 style={{ margin: "0 0 15px 0", fontSize: "14px", color: "#66ccff", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Oscillators
+            </h3>
+
+            {/* Hue Oscillator */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Hue Oscillator {hueOscEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={hueOscEnabled} onChange={(e) => setHueOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={hueOscFunction} onChange={(e) => setHueOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
+                    <option value="sin">Sin</option>
+                    <option value="cos">Cos</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {hueOscSpeed.toFixed(2)}
+                  <input type="range" min="0.1" max="5" step="0.1" value={hueOscSpeed} onChange={(e) => setHueOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {hueOscMin}
+                  <input type="range" min="0" max="360" step="1" value={hueOscMin} onChange={(e) => setHueOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {hueOscMax}
+                  <input type="range" min="0" max="360" step="1" value={hueOscMax} onChange={(e) => setHueOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Radius Oscillator */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Radius Oscillator {radiusOscEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={radiusOscEnabled} onChange={(e) => setRadiusOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={radiusOscFunction} onChange={(e) => setRadiusOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
+                    <option value="sin">Sin</option>
+                    <option value="cos">Cos</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {radiusOscSpeed.toFixed(2)}
+                  <input type="range" min="0.1" max="5" step="0.1" value={radiusOscSpeed} onChange={(e) => setRadiusOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {radiusOscMin.toFixed(1)}
+                  <input type="range" min="2" max="15" step="0.1" value={radiusOscMin} onChange={(e) => setRadiusOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {radiusOscMax.toFixed(1)}
+                  <input type="range" min="2" max="15" step="0.1" value={radiusOscMax} onChange={(e) => setRadiusOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Spacing Oscillator */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Spacing Oscillator {spacingOscEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={spacingOscEnabled} onChange={(e) => setSpacingOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={spacingOscFunction} onChange={(e) => setSpacingOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
+                    <option value="sin">Sin</option>
+                    <option value="cos">Cos</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {spacingOscSpeed.toFixed(2)}
+                  <input type="range" min="0.1" max="5" step="0.1" value={spacingOscSpeed} onChange={(e) => setSpacingOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {spacingOscMin.toFixed(1)}
+                  <input type="range" min="0.5" max="5" step="0.1" value={spacingOscMin} onChange={(e) => setSpacingOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {spacingOscMax.toFixed(1)}
+                  <input type="range" min="0.5" max="5" step="0.1" value={spacingOscMax} onChange={(e) => setSpacingOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Segments Oscillator */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Segments Oscillator {segmentsOscEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={segmentsOscEnabled} onChange={(e) => setSegmentsOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={segmentsOscFunction} onChange={(e) => setSegmentsOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
+                    <option value="sin">Sin</option>
+                    <option value="cos">Cos</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {segmentsOscSpeed.toFixed(2)}
+                  <input type="range" min="0.1" max="5" step="0.1" value={segmentsOscSpeed} onChange={(e) => setSegmentsOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {segmentsOscMin}
+                  <input type="range" min="3" max="64" step="1" value={segmentsOscMin} onChange={(e) => setSegmentsOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {segmentsOscMax}
+                  <input type="range" min="3" max="64" step="1" value={segmentsOscMax} onChange={(e) => setSegmentsOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+          </div>
         </div>
       )}
     </div>
