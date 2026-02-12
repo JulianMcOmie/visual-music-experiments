@@ -124,13 +124,15 @@ export default function Tunnel3D() {
       if (!pausedRef.current) {
         time += 0.01 * speedRef.current;
 
-        // Move rings forward toward camera
-        rings.forEach((ring, i) => {
+        // Move all rings forward toward camera first
+        rings.forEach((ring) => {
           ring.position.z += 0.1 * speedRef.current;
+        });
 
-          // Reset ring to the back when it passes the camera
+        // Then reset rings that passed the camera (after all movement is complete)
+        rings.forEach((ring, i) => {
           if (ring.position.z > 5) {
-            // Find the furthest back ring
+            // Find the furthest back ring (after all movement is done)
             const minZ = Math.min(...rings.map(r => r.position.z));
             // Place this ring using current generation spacing constant
             ring.position.z = minZ - generationSpacingRef.current;
