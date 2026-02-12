@@ -255,7 +255,7 @@ export default function Tunnel3D() {
               type="range"
               min="0.1"
               max="10"
-              step="0.1"
+              step="0.01"
               value={speed}
               onChange={(e) => setSpeed(Number(e.target.value))}
               style={{ width: "100%" }}
@@ -279,7 +279,7 @@ export default function Tunnel3D() {
               type="range"
               min="2"
               max="15"
-              step="0.5"
+              step="0.01"
               value={tunnelRadius}
               onChange={(e) => setTunnelRadius(Number(e.target.value))}
               style={{ width: "100%" }}
@@ -327,7 +327,7 @@ export default function Tunnel3D() {
               type="range"
               min="0.5"
               max="5"
-              step="0.1"
+              step="0.01"
               value={ringSpacing}
               onChange={(e) => setRingSpacing(Number(e.target.value))}
               style={{ width: "100%" }}
@@ -351,7 +351,7 @@ export default function Tunnel3D() {
               type="range"
               min="0"
               max="360"
-              step="1"
+              step="0.1"
               value={hueShift}
               onChange={(e) => setHueShift(Number(e.target.value))}
               style={{ width: "100%" }}
