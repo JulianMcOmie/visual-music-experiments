@@ -18,12 +18,12 @@ const projects = [
     snapshot: "/snapshots/3d-polar-functions.png",
   },
   {
-    title: "Warp Speed Tunnel",
+    title: "Polar Bursts",
     href: "/tunnel",
     description: "First-person flight through an infinite procedural tunnel with color-shifting rings.",
     color: "#ff6644",
     bgColor: "#000508",
-    snapshot: "/snapshots/warp-speed-tunnel.png",
+    snapshot: "/snapshots/polar-bursts.png",
   },
   {
     title: "Cube Tube",
