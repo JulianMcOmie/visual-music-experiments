@@ -95,7 +95,8 @@ export default function Tunnel3D() {
         16,
         generationSegmentsRef.current
       );
-      const hue = (i * 10 + generationHueRef.current) % 360;
+      // Hue is exactly the generation constant, not calculated from ring index
+      const hue = generationHueRef.current;
       const material = new THREE.MeshBasicMaterial({
         color: new THREE.Color().setHSL(hue / 360, 0.8, 0.5),
         wireframe: false,
@@ -143,8 +144,8 @@ export default function Tunnel3D() {
               generationSegmentsRef.current
             );
 
-            // Calculate new hue from generation constant
-            const newHue = (ring.userData.birthIndex * 10 + generationHueRef.current) % 360;
+            // Use exact hue from generation constant (no calculation)
+            const newHue = generationHueRef.current;
 
             // Bake generation constants into ring
             ring.userData = {
