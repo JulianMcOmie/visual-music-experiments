@@ -21,7 +21,7 @@ app/
 ├── page.tsx                 # Gallery homepage with project cards
 ├── circle/                  # Polar Functions (2D)
 ├── polar/                   # 3D Polar Functions (Three.js)
-├── tunnel/                  # Warp Speed Tunnel (2D)
+├── tunnel/                  # Polar Bursts (2D)
 ├── cube-tube/               # Cube Tube (Three.js)
 └── penrose-tiling/          # Penrose Tiling (2D)
 
@@ -139,6 +139,7 @@ chromium.launch({
 
 ## Git Conventions
 
+- **Do NOT auto-commit or auto-push**: Never commit or push changes unless explicitly requested by the user
 - **Commit messages**: Use clear, descriptive messages without co-author tags
 - **No Claude references**: Don't include "Co-Authored-By: Claude" in commits
 - Example: "Add timeline keyframes with oscillator variations"
