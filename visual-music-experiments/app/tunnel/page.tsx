@@ -3,6 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
+type WaveFunction = "sin" | "cos" | "triangle" | "sawtooth";
+
+const waveFunctions: Record<WaveFunction, (x: number) => number> = {
+  sin: (x) => Math.sin(x),
+  cos: (x) => Math.cos(x),
+  triangle: (x) => Math.abs((x / Math.PI) % 2 - 1) * 2 - 1,
+  sawtooth: (x) => 2 * (x / (2 * Math.PI) - Math.floor(x / (2 * Math.PI) + 0.5)),
+};
+
 export default function Tunnel3D() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [speed, setSpeed] = useState(2);
@@ -12,6 +21,31 @@ export default function Tunnel3D() {
   const [generationRadius, setGenerationRadius] = useState(5);
   const [generationSpacing, setGenerationSpacing] = useState(2);
   const [generationSegments, setGenerationSegments] = useState(32);
+
+  // Oscillators for generation constants
+  const [hueOscEnabled, setHueOscEnabled] = useState(false);
+  const [hueOscFunction, setHueOscFunction] = useState<WaveFunction>("sin");
+  const [hueOscSpeed, setHueOscSpeed] = useState(1);
+  const [hueOscMin, setHueOscMin] = useState(0);
+  const [hueOscMax, setHueOscMax] = useState(360);
+
+  const [radiusOscEnabled, setRadiusOscEnabled] = useState(false);
+  const [radiusOscFunction, setRadiusOscFunction] = useState<WaveFunction>("sin");
+  const [radiusOscSpeed, setRadiusOscSpeed] = useState(1);
+  const [radiusOscMin, setRadiusOscMin] = useState(2);
+  const [radiusOscMax, setRadiusOscMax] = useState(10);
+
+  const [spacingOscEnabled, setSpacingOscEnabled] = useState(false);
+  const [spacingOscFunction, setSpacingOscFunction] = useState<WaveFunction>("sin");
+  const [spacingOscSpeed, setSpacingOscSpeed] = useState(1);
+  const [spacingOscMin, setSpacingOscMin] = useState(0.5);
+  const [spacingOscMax, setSpacingOscMax] = useState(5);
+
+  const [segmentsOscEnabled, setSegmentsOscEnabled] = useState(false);
+  const [segmentsOscFunction, setSegmentsOscFunction] = useState<WaveFunction>("sin");
+  const [segmentsOscSpeed, setSegmentsOscSpeed] = useState(1);
+  const [segmentsOscMin, setSegmentsOscMin] = useState(3);
+  const [segmentsOscMax, setSegmentsOscMax] = useState(64);
 
   const [showControls, setShowControls] = useState(true);
   const [isPreview, setIsPreview] = useState(false);
@@ -46,6 +80,31 @@ export default function Tunnel3D() {
   const generationSpacingRef = useRef(generationSpacing);
   const generationSegmentsRef = useRef(generationSegments);
 
+  // Oscillator refs
+  const hueOscEnabledRef = useRef(hueOscEnabled);
+  const hueOscFunctionRef = useRef(hueOscFunction);
+  const hueOscSpeedRef = useRef(hueOscSpeed);
+  const hueOscMinRef = useRef(hueOscMin);
+  const hueOscMaxRef = useRef(hueOscMax);
+
+  const radiusOscEnabledRef = useRef(radiusOscEnabled);
+  const radiusOscFunctionRef = useRef(radiusOscFunction);
+  const radiusOscSpeedRef = useRef(radiusOscSpeed);
+  const radiusOscMinRef = useRef(radiusOscMin);
+  const radiusOscMaxRef = useRef(radiusOscMax);
+
+  const spacingOscEnabledRef = useRef(spacingOscEnabled);
+  const spacingOscFunctionRef = useRef(spacingOscFunction);
+  const spacingOscSpeedRef = useRef(spacingOscSpeed);
+  const spacingOscMinRef = useRef(spacingOscMin);
+  const spacingOscMaxRef = useRef(spacingOscMax);
+
+  const segmentsOscEnabledRef = useRef(segmentsOscEnabled);
+  const segmentsOscFunctionRef = useRef(segmentsOscFunction);
+  const segmentsOscSpeedRef = useRef(segmentsOscSpeed);
+  const segmentsOscMinRef = useRef(segmentsOscMin);
+  const segmentsOscMaxRef = useRef(segmentsOscMax);
+
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
@@ -65,6 +124,38 @@ export default function Tunnel3D() {
   useEffect(() => {
     generationSegmentsRef.current = generationSegments;
   }, [generationSegments]);
+
+  useEffect(() => {
+    hueOscEnabledRef.current = hueOscEnabled;
+    hueOscFunctionRef.current = hueOscFunction;
+    hueOscSpeedRef.current = hueOscSpeed;
+    hueOscMinRef.current = hueOscMin;
+    hueOscMaxRef.current = hueOscMax;
+  }, [hueOscEnabled, hueOscFunction, hueOscSpeed, hueOscMin, hueOscMax]);
+
+  useEffect(() => {
+    radiusOscEnabledRef.current = radiusOscEnabled;
+    radiusOscFunctionRef.current = radiusOscFunction;
+    radiusOscSpeedRef.current = radiusOscSpeed;
+    radiusOscMinRef.current = radiusOscMin;
+    radiusOscMaxRef.current = radiusOscMax;
+  }, [radiusOscEnabled, radiusOscFunction, radiusOscSpeed, radiusOscMin, radiusOscMax]);
+
+  useEffect(() => {
+    spacingOscEnabledRef.current = spacingOscEnabled;
+    spacingOscFunctionRef.current = spacingOscFunction;
+    spacingOscSpeedRef.current = spacingOscSpeed;
+    spacingOscMinRef.current = spacingOscMin;
+    spacingOscMaxRef.current = spacingOscMax;
+  }, [spacingOscEnabled, spacingOscFunction, spacingOscSpeed, spacingOscMin, spacingOscMax]);
+
+  useEffect(() => {
+    segmentsOscEnabledRef.current = segmentsOscEnabled;
+    segmentsOscFunctionRef.current = segmentsOscFunction;
+    segmentsOscSpeedRef.current = segmentsOscSpeed;
+    segmentsOscMinRef.current = segmentsOscMin;
+    segmentsOscMaxRef.current = segmentsOscMax;
+  }, [segmentsOscEnabled, segmentsOscFunction, segmentsOscSpeed, segmentsOscMin, segmentsOscMax]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -120,6 +211,21 @@ export default function Tunnel3D() {
     let time = 0;
     let frameCount = 0;
 
+    // Helper function to calculate oscillated value
+    const getOscillatedValue = (
+      baseValue: number,
+      enabled: boolean,
+      waveFunc: WaveFunction,
+      speed: number,
+      min: number,
+      max: number
+    ): number => {
+      if (!enabled) return baseValue;
+      const wave = waveFunctions[waveFunc];
+      const normalizedWave = (wave(time * speed) + 1) / 2; // 0 to 1
+      return min + normalizedWave * (max - min);
+    };
+
     const animate = () => {
       if (!pausedRef.current) {
         time += 0.01 * speedRef.current;
@@ -132,35 +238,69 @@ export default function Tunnel3D() {
         // Then reset rings that passed the camera (after all movement is complete)
         rings.forEach((ring, i) => {
           if (ring.position.z > 5) {
-            // Find the furthest back ring (after all movement is done)
-            const minZ = Math.min(...rings.map(r => r.position.z));
-            // Place this ring using current generation spacing constant
-            ring.position.z = minZ - generationSpacingRef.current;
-
-            // Regenerate with current generation constants
-            ring.geometry.dispose();
-            ring.geometry = new THREE.TorusGeometry(
-              generationRadiusRef.current,
-              0.2,
-              16,
-              generationSegmentsRef.current
+            // Calculate oscillated generation constants
+            const currentHue = getOscillatedValue(
+              generationHueRef.current,
+              hueOscEnabledRef.current,
+              hueOscFunctionRef.current,
+              hueOscSpeedRef.current,
+              hueOscMinRef.current,
+              hueOscMaxRef.current
             );
 
-            // Use exact hue from generation constant (no calculation)
-            const newHue = generationHueRef.current;
+            const currentRadius = getOscillatedValue(
+              generationRadiusRef.current,
+              radiusOscEnabledRef.current,
+              radiusOscFunctionRef.current,
+              radiusOscSpeedRef.current,
+              radiusOscMinRef.current,
+              radiusOscMaxRef.current
+            );
 
-            // Bake generation constants into ring
+            const currentSpacing = getOscillatedValue(
+              generationSpacingRef.current,
+              spacingOscEnabledRef.current,
+              spacingOscFunctionRef.current,
+              spacingOscSpeedRef.current,
+              spacingOscMinRef.current,
+              spacingOscMaxRef.current
+            );
+
+            const currentSegments = Math.round(getOscillatedValue(
+              generationSegmentsRef.current,
+              segmentsOscEnabledRef.current,
+              segmentsOscFunctionRef.current,
+              segmentsOscSpeedRef.current,
+              segmentsOscMinRef.current,
+              segmentsOscMaxRef.current
+            ));
+
+            // Find the furthest back ring (after all movement is done)
+            const minZ = Math.min(...rings.map(r => r.position.z));
+            // Place this ring using oscillated spacing
+            ring.position.z = minZ - currentSpacing;
+
+            // Regenerate with oscillated generation constants
+            ring.geometry.dispose();
+            ring.geometry = new THREE.TorusGeometry(
+              currentRadius,
+              0.2,
+              16,
+              currentSegments
+            );
+
+            // Bake oscillated generation constants into ring
             ring.userData = {
-              radius: generationRadiusRef.current,
-              segments: generationSegmentsRef.current,
-              hue: newHue,
-              spacing: generationSpacingRef.current,
+              radius: currentRadius,
+              segments: currentSegments,
+              hue: currentHue,
+              spacing: currentSpacing,
               birthIndex: ring.userData.birthIndex,
             };
 
             // Set the color to the new baked hue
             (ring.material as THREE.MeshBasicMaterial).color.setHSL(
-              newHue / 360,
+              currentHue / 360,
               0.8,
               0.5
             );
