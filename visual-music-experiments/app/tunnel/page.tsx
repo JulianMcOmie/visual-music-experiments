@@ -126,6 +126,8 @@ const DEFAULT_SETTINGS = {
   numRings: 50,
   colorPattern: "none",
   generationHue: 180,
+  generationSaturation: 0.8,
+  generationBrightness: 0.5,
   generationRadius: 5,
   generationSpacing: 2,
   generationSegments: 3,
@@ -176,6 +178,16 @@ const DEFAULT_SETTINGS = {
   tubeThicknessOscSpeed: 1,
   tubeThicknessOscMin: 0.05,
   tubeThicknessOscMax: 1,
+  saturationOscEnabled: false,
+  saturationOscFunction: "sin" as WaveFunction,
+  saturationOscSpeed: 1,
+  saturationOscMin: 0,
+  saturationOscMax: 1,
+  brightnessOscEnabled: false,
+  brightnessOscFunction: "sin" as WaveFunction,
+  brightnessOscSpeed: 1,
+  brightnessOscMin: 0,
+  brightnessOscMax: 1,
 };
 
 export default function Tunnel3D() {
@@ -189,6 +201,8 @@ export default function Tunnel3D() {
 
   // Generation constants - determine how new rings are created
   const [generationHue, setGenerationHue] = useState(DEFAULT_SETTINGS.generationHue);
+  const [generationSaturation, setGenerationSaturation] = useState(DEFAULT_SETTINGS.generationSaturation);
+  const [generationBrightness, setGenerationBrightness] = useState(DEFAULT_SETTINGS.generationBrightness);
   const [generationRadius, setGenerationRadius] = useState(DEFAULT_SETTINGS.generationRadius);
   const [generationSpacing, setGenerationSpacing] = useState(DEFAULT_SETTINGS.generationSpacing);
   const [generationSegments, setGenerationSegments] = useState(DEFAULT_SETTINGS.generationSegments);
@@ -245,6 +259,18 @@ export default function Tunnel3D() {
   const [tubeThicknessOscMin, setTubeThicknessOscMin] = useState(DEFAULT_SETTINGS.tubeThicknessOscMin);
   const [tubeThicknessOscMax, setTubeThicknessOscMax] = useState(DEFAULT_SETTINGS.tubeThicknessOscMax);
 
+  const [saturationOscEnabled, setSaturationOscEnabled] = useState(DEFAULT_SETTINGS.saturationOscEnabled);
+  const [saturationOscFunction, setSaturationOscFunction] = useState<WaveFunction>(DEFAULT_SETTINGS.saturationOscFunction);
+  const [saturationOscSpeed, setSaturationOscSpeed] = useState(DEFAULT_SETTINGS.saturationOscSpeed);
+  const [saturationOscMin, setSaturationOscMin] = useState(DEFAULT_SETTINGS.saturationOscMin);
+  const [saturationOscMax, setSaturationOscMax] = useState(DEFAULT_SETTINGS.saturationOscMax);
+
+  const [brightnessOscEnabled, setBrightnessOscEnabled] = useState(DEFAULT_SETTINGS.brightnessOscEnabled);
+  const [brightnessOscFunction, setBrightnessOscFunction] = useState<WaveFunction>(DEFAULT_SETTINGS.brightnessOscFunction);
+  const [brightnessOscSpeed, setBrightnessOscSpeed] = useState(DEFAULT_SETTINGS.brightnessOscSpeed);
+  const [brightnessOscMin, setBrightnessOscMin] = useState(DEFAULT_SETTINGS.brightnessOscMin);
+  const [brightnessOscMax, setBrightnessOscMax] = useState(DEFAULT_SETTINGS.brightnessOscMax);
+
   // Burst parameters
   const [burstEnabled, setBurstEnabled] = useState(DEFAULT_SETTINGS.burstEnabled);
   const [burstInterval, setBurstInterval] = useState(DEFAULT_SETTINGS.burstInterval);
@@ -272,6 +298,8 @@ export default function Tunnel3D() {
         setNumRings(settings.numRings ?? DEFAULT_SETTINGS.numRings);
         setColorPattern(settings.colorPattern ?? DEFAULT_SETTINGS.colorPattern);
         setGenerationHue(settings.generationHue ?? DEFAULT_SETTINGS.generationHue);
+        setGenerationSaturation(settings.generationSaturation ?? DEFAULT_SETTINGS.generationSaturation);
+        setGenerationBrightness(settings.generationBrightness ?? DEFAULT_SETTINGS.generationBrightness);
         setGenerationRadius(settings.generationRadius ?? DEFAULT_SETTINGS.generationRadius);
         setGenerationSpacing(settings.generationSpacing ?? DEFAULT_SETTINGS.generationSpacing);
         setGenerationSegments(settings.generationSegments ?? DEFAULT_SETTINGS.generationSegments);
@@ -322,6 +350,16 @@ export default function Tunnel3D() {
         setTubeThicknessOscSpeed(settings.tubeThicknessOscSpeed ?? DEFAULT_SETTINGS.tubeThicknessOscSpeed);
         setTubeThicknessOscMin(settings.tubeThicknessOscMin ?? DEFAULT_SETTINGS.tubeThicknessOscMin);
         setTubeThicknessOscMax(settings.tubeThicknessOscMax ?? DEFAULT_SETTINGS.tubeThicknessOscMax);
+        setSaturationOscEnabled(settings.saturationOscEnabled ?? DEFAULT_SETTINGS.saturationOscEnabled);
+        setSaturationOscFunction(settings.saturationOscFunction ?? DEFAULT_SETTINGS.saturationOscFunction);
+        setSaturationOscSpeed(settings.saturationOscSpeed ?? DEFAULT_SETTINGS.saturationOscSpeed);
+        setSaturationOscMin(settings.saturationOscMin ?? DEFAULT_SETTINGS.saturationOscMin);
+        setSaturationOscMax(settings.saturationOscMax ?? DEFAULT_SETTINGS.saturationOscMax);
+        setBrightnessOscEnabled(settings.brightnessOscEnabled ?? DEFAULT_SETTINGS.brightnessOscEnabled);
+        setBrightnessOscFunction(settings.brightnessOscFunction ?? DEFAULT_SETTINGS.brightnessOscFunction);
+        setBrightnessOscSpeed(settings.brightnessOscSpeed ?? DEFAULT_SETTINGS.brightnessOscSpeed);
+        setBrightnessOscMin(settings.brightnessOscMin ?? DEFAULT_SETTINGS.brightnessOscMin);
+        setBrightnessOscMax(settings.brightnessOscMax ?? DEFAULT_SETTINGS.brightnessOscMax);
       } catch (e) {
         console.error("Failed to load settings from localStorage:", e);
       }
@@ -353,6 +391,8 @@ export default function Tunnel3D() {
   const cameraRotationRef = useRef(cameraRotation);
   const colorPatternRef = useRef(colorPattern);
   const generationHueRef = useRef(generationHue);
+  const generationSaturationRef = useRef(generationSaturation);
+  const generationBrightnessRef = useRef(generationBrightness);
   const generationRadiusRef = useRef(generationRadius);
   const generationSpacingRef = useRef(generationSpacing);
   const generationSegmentsRef = useRef(generationSegments);
@@ -409,6 +449,18 @@ export default function Tunnel3D() {
   const tubeThicknessOscMinRef = useRef(tubeThicknessOscMin);
   const tubeThicknessOscMaxRef = useRef(tubeThicknessOscMax);
 
+  const saturationOscEnabledRef = useRef(saturationOscEnabled);
+  const saturationOscFunctionRef = useRef(saturationOscFunction);
+  const saturationOscSpeedRef = useRef(saturationOscSpeed);
+  const saturationOscMinRef = useRef(saturationOscMin);
+  const saturationOscMaxRef = useRef(saturationOscMax);
+
+  const brightnessOscEnabledRef = useRef(brightnessOscEnabled);
+  const brightnessOscFunctionRef = useRef(brightnessOscFunction);
+  const brightnessOscSpeedRef = useRef(brightnessOscSpeed);
+  const brightnessOscMinRef = useRef(brightnessOscMin);
+  const brightnessOscMaxRef = useRef(brightnessOscMax);
+
   const burstEnabledRef = useRef(burstEnabled);
   const burstIntervalRef = useRef(burstInterval);
   const burstMagnitudeRef = useRef(burstMagnitude);
@@ -444,6 +496,14 @@ export default function Tunnel3D() {
   useEffect(() => {
     generationHueRef.current = generationHue;
   }, [generationHue]);
+
+  useEffect(() => {
+    generationSaturationRef.current = generationSaturation;
+  }, [generationSaturation]);
+
+  useEffect(() => {
+    generationBrightnessRef.current = generationBrightness;
+  }, [generationBrightness]);
 
   useEffect(() => {
     generationRadiusRef.current = generationRadius;
@@ -525,6 +585,22 @@ export default function Tunnel3D() {
     tubeThicknessOscMaxRef.current = tubeThicknessOscMax;
   }, [tubeThicknessOscEnabled, tubeThicknessOscFunction, tubeThicknessOscSpeed, tubeThicknessOscMin, tubeThicknessOscMax]);
 
+  useEffect(() => {
+    saturationOscEnabledRef.current = saturationOscEnabled;
+    saturationOscFunctionRef.current = saturationOscFunction;
+    saturationOscSpeedRef.current = saturationOscSpeed;
+    saturationOscMinRef.current = saturationOscMin;
+    saturationOscMaxRef.current = saturationOscMax;
+  }, [saturationOscEnabled, saturationOscFunction, saturationOscSpeed, saturationOscMin, saturationOscMax]);
+
+  useEffect(() => {
+    brightnessOscEnabledRef.current = brightnessOscEnabled;
+    brightnessOscFunctionRef.current = brightnessOscFunction;
+    brightnessOscSpeedRef.current = brightnessOscSpeed;
+    brightnessOscMinRef.current = brightnessOscMin;
+    brightnessOscMaxRef.current = brightnessOscMax;
+  }, [brightnessOscEnabled, brightnessOscFunction, brightnessOscSpeed, brightnessOscMin, brightnessOscMax]);
+
   // Save all settings to localStorage whenever they change (but only after initial load)
   useEffect(() => {
     // Don't save until we've loaded from localStorage first
@@ -536,6 +612,8 @@ export default function Tunnel3D() {
       numRings,
       colorPattern,
       generationHue,
+      generationSaturation,
+      generationBrightness,
       generationRadius,
       generationSpacing,
       generationSegments,
@@ -586,6 +664,16 @@ export default function Tunnel3D() {
       tubeThicknessOscSpeed,
       tubeThicknessOscMin,
       tubeThicknessOscMax,
+      saturationOscEnabled,
+      saturationOscFunction,
+      saturationOscSpeed,
+      saturationOscMin,
+      saturationOscMax,
+      brightnessOscEnabled,
+      brightnessOscFunction,
+      brightnessOscSpeed,
+      brightnessOscMin,
+      brightnessOscMax,
     };
     localStorage.setItem("tunnel3d-settings", JSON.stringify(settings));
   }, [
@@ -594,6 +682,8 @@ export default function Tunnel3D() {
     numRings,
     colorPattern,
     generationHue,
+    generationSaturation,
+    generationBrightness,
     generationRadius,
     generationSpacing,
     generationSegments,
@@ -644,6 +734,16 @@ export default function Tunnel3D() {
     tubeThicknessOscSpeed,
     tubeThicknessOscMin,
     tubeThicknessOscMax,
+    saturationOscEnabled,
+    saturationOscFunction,
+    saturationOscSpeed,
+    saturationOscMin,
+    saturationOscMax,
+    brightnessOscEnabled,
+    brightnessOscFunction,
+    brightnessOscSpeed,
+    brightnessOscMin,
+    brightnessOscMax,
   ]);
 
   // Clear all oscillators function
@@ -656,6 +756,8 @@ export default function Tunnel3D() {
     setRotationSpeedOscEnabled(false);
     setShapeRotationOscEnabled(false);
     setTubeThicknessOscEnabled(false);
+    setSaturationOscEnabled(false);
+    setBrightnessOscEnabled(false);
   };
 
   // Reset all settings to defaults
@@ -665,6 +767,8 @@ export default function Tunnel3D() {
     setNumRings(DEFAULT_SETTINGS.numRings);
     setColorPattern(DEFAULT_SETTINGS.colorPattern);
     setGenerationHue(DEFAULT_SETTINGS.generationHue);
+    setGenerationSaturation(DEFAULT_SETTINGS.generationSaturation);
+    setGenerationBrightness(DEFAULT_SETTINGS.generationBrightness);
     setGenerationRadius(DEFAULT_SETTINGS.generationRadius);
     setGenerationSpacing(DEFAULT_SETTINGS.generationSpacing);
     setGenerationSegments(DEFAULT_SETTINGS.generationSegments);
@@ -715,6 +819,16 @@ export default function Tunnel3D() {
     setTubeThicknessOscSpeed(DEFAULT_SETTINGS.tubeThicknessOscSpeed);
     setTubeThicknessOscMin(DEFAULT_SETTINGS.tubeThicknessOscMin);
     setTubeThicknessOscMax(DEFAULT_SETTINGS.tubeThicknessOscMax);
+    setSaturationOscEnabled(DEFAULT_SETTINGS.saturationOscEnabled);
+    setSaturationOscFunction(DEFAULT_SETTINGS.saturationOscFunction);
+    setSaturationOscSpeed(DEFAULT_SETTINGS.saturationOscSpeed);
+    setSaturationOscMin(DEFAULT_SETTINGS.saturationOscMin);
+    setSaturationOscMax(DEFAULT_SETTINGS.saturationOscMax);
+    setBrightnessOscEnabled(DEFAULT_SETTINGS.brightnessOscEnabled);
+    setBrightnessOscFunction(DEFAULT_SETTINGS.brightnessOscFunction);
+    setBrightnessOscSpeed(DEFAULT_SETTINGS.brightnessOscSpeed);
+    setBrightnessOscMin(DEFAULT_SETTINGS.brightnessOscMin);
+    setBrightnessOscMax(DEFAULT_SETTINGS.brightnessOscMax);
   };
 
   useEffect(() => {
@@ -735,13 +849,13 @@ export default function Tunnel3D() {
     containerRef.current.appendChild(renderer.domElement);
 
     // Helper function to apply color pattern override
-    const applyColorPattern = (material: THREE.MeshBasicMaterial, birthIndex: number, baseHue: number) => {
+    const applyColorPattern = (material: THREE.MeshBasicMaterial, birthIndex: number, baseHue: number, saturation: number, brightness: number) => {
       const pattern = colorPatternRef.current;
 
       if (pattern === "every-5-white" && birthIndex % 5 === 0) {
         material.color.setRGB(1, 1, 1); // White
       } else {
-        material.color.setHSL(baseHue / 360, 0.8, 0.5);
+        material.color.setHSL(baseHue / 360, saturation, brightness);
       }
     };
 
@@ -772,6 +886,8 @@ export default function Tunnel3D() {
         radius: generationRadiusRef.current,
         segments: generationSegmentsRef.current,
         hue: hue,
+        saturation: generationSaturationRef.current,
+        brightness: generationBrightnessRef.current,
         spacing: generationSpacingRef.current,
         shapeRotation: shapeRotationRef.current,
         tubeThickness: tubeThicknessRef.current,
@@ -779,7 +895,7 @@ export default function Tunnel3D() {
       };
 
       // Apply color with pattern override if applicable
-      applyColorPattern(ring.material as THREE.MeshBasicMaterial, birthIndex, hue);
+      applyColorPattern(ring.material as THREE.MeshBasicMaterial, birthIndex, hue, generationSaturationRef.current, generationBrightnessRef.current);
 
       scene.add(ring);
       rings.push(ring);
@@ -957,6 +1073,24 @@ export default function Tunnel3D() {
               rotationSpeedOscMaxRef.current
             );
 
+            const currentSaturation = getOscillatedValue(
+              generationSaturationRef.current,
+              saturationOscEnabledRef.current,
+              saturationOscFunctionRef.current,
+              saturationOscSpeedRef.current,
+              saturationOscMinRef.current,
+              saturationOscMaxRef.current
+            );
+
+            const currentBrightness = getOscillatedValue(
+              generationBrightnessRef.current,
+              brightnessOscEnabledRef.current,
+              brightnessOscFunctionRef.current,
+              brightnessOscSpeedRef.current,
+              brightnessOscMinRef.current,
+              brightnessOscMaxRef.current
+            );
+
             // Find the furthest back ring (after all movement is done)
             const minZ = Math.min(...rings.map(r => r.position.z));
             // Place this ring using oscillated spacing
@@ -979,6 +1113,8 @@ export default function Tunnel3D() {
               radius: currentRadius,
               segments: currentSegments,
               hue: currentHue,
+              saturation: currentSaturation,
+              brightness: currentBrightness,
               spacing: currentSpacing,
               shapeRotation: currentShapeRotation,
               tubeThickness: currentTubeThickness,
@@ -986,7 +1122,7 @@ export default function Tunnel3D() {
             };
 
             // Apply color with pattern override if applicable
-            applyColorPattern(ring.material as THREE.MeshBasicMaterial, ring.userData.birthIndex, currentHue);
+            applyColorPattern(ring.material as THREE.MeshBasicMaterial, ring.userData.birthIndex, currentHue, currentSaturation, currentBrightness);
           }
 
           // Update debug values every 5 frames
@@ -1289,6 +1425,54 @@ export default function Tunnel3D() {
               step="0.1"
               value={generationHue}
               onChange={(e) => setGenerationHue(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              htmlFor="generationSaturation"
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                color: "#fff",
+              }}
+            >
+              Ring Saturation: {generationSaturation.toFixed(2)}
+            </label>
+            <input
+              id="generationSaturation"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={generationSaturation}
+              onChange={(e) => setGenerationSaturation(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              htmlFor="generationBrightness"
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                color: "#fff",
+              }}
+            >
+              Ring Brightness: {generationBrightness.toFixed(2)}
+            </label>
+            <input
+              id="generationBrightness"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={generationBrightness}
+              onChange={(e) => setGenerationBrightness(Number(e.target.value))}
               style={{ width: "100%" }}
             />
           </div>
@@ -1954,6 +2138,132 @@ export default function Tunnel3D() {
                 <label style={{ display: "block", fontSize: "12px" }}>
                   Max: {tubeThicknessOscMax.toFixed(2)}
                   <input type="range" min="0.05" max="1" step="0.01" value={tubeThicknessOscMax} onChange={(e) => setTubeThicknessOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Saturation Oscillator */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Saturation Oscillator {saturationOscEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={saturationOscEnabled} onChange={(e) => setSaturationOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={saturationOscFunction} onChange={(e) => setSaturationOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {saturationOscSpeed.toFixed(2)}
+                  <input type="range" min="0.001" max="5" step="0.001" value={saturationOscSpeed} onChange={(e) => setSaturationOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {saturationOscMin.toFixed(2)}
+                  <input type="range" min="0" max="1" step="0.01" value={saturationOscMin} onChange={(e) => setSaturationOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {saturationOscMax.toFixed(2)}
+                  <input type="range" min="0" max="1" step="0.01" value={saturationOscMax} onChange={(e) => setSaturationOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Brightness Oscillator */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Brightness Oscillator {brightnessOscEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={brightnessOscEnabled} onChange={(e) => setBrightnessOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={brightnessOscFunction} onChange={(e) => setBrightnessOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {brightnessOscSpeed.toFixed(2)}
+                  <input type="range" min="0.001" max="5" step="0.001" value={brightnessOscSpeed} onChange={(e) => setBrightnessOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {brightnessOscMin.toFixed(2)}
+                  <input type="range" min="0" max="1" step="0.01" value={brightnessOscMin} onChange={(e) => setBrightnessOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {brightnessOscMax.toFixed(2)}
+                  <input type="range" min="0" max="1" step="0.01" value={brightnessOscMax} onChange={(e) => setBrightnessOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
               </div>
             </details>
