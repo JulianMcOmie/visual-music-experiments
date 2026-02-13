@@ -282,12 +282,22 @@ export default function Tunnel3D() {
   const pausedRef = useRef(false);
   const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
 
-  // Debug values
-  const [debugTime, setDebugTime] = useState(0);
-  const [debugRingZ, setDebugRingZ] = useState(0);
-  const [debugHue, setDebugHue] = useState(0);
-  const [debugFPS, setDebugFPS] = useState(0);
-  const [debugRegenCount, setDebugRegenCount] = useState(0);
+  // Debug values - use refs to avoid triggering re-renders from animation loop
+  const debugInfoRef = useRef({
+    time: 0,
+    ringZ: 0,
+    hue: 0,
+    fps: 0,
+    regenCount: 0,
+  });
+  // State for display only, updated on interval
+  const [debugInfo, setDebugInfo] = useState({
+    time: 0,
+    ringZ: 0,
+    hue: 0,
+    fps: 0,
+    regenCount: 0,
+  });
 
   // Load settings from localStorage after mount (client-side only)
   useEffect(() => {
@@ -1160,13 +1170,15 @@ export default function Tunnel3D() {
             applyColorPattern(ring.material as THREE.MeshBasicMaterial, ring.userData.birthIndex, currentHue, currentSaturation, currentBrightness);
           }
 
-          // Update debug values every 5 frames
-          if (i === 0 && frameCount % 5 === 0) {
-            setDebugTime(time);
-            setDebugRingZ(ring.position.z);
-            setDebugHue(ring.userData.hue);
-            setDebugFPS(Math.round(fps));
-            setDebugRegenCount(regenThisFrame);
+          // Update debug ref (no re-render, state updated separately on interval)
+          if (i === 0) {
+            debugInfoRef.current = {
+              time,
+              ringZ: ring.position.z,
+              hue: ring.userData.hue,
+              fps: Math.round(fps),
+              regenCount: regenThisFrame,
+            };
           }
         });
 
@@ -1198,6 +1210,15 @@ export default function Tunnel3D() {
     };
   }, [numRings]);
 
+  // Update debug display state from ref on interval (avoids setState in animation loop)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDebugInfo({ ...debugInfoRef.current });
+    }, 100); // Update display 10x per second
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
@@ -1209,6 +1230,7 @@ export default function Tunnel3D() {
             position: "absolute",
             top: "20px",
             right: "20px",
+            minWidth: "180px",
             background: "rgba(0, 0, 0, 0.7)",
             color: "#66ccff",
             padding: "12px 16px",
@@ -1219,15 +1241,15 @@ export default function Tunnel3D() {
             border: "1px solid rgba(102, 204, 255, 0.3)",
           }}
         >
-          <div style={{ color: debugFPS < 30 ? "#ff4444" : debugFPS < 50 ? "#ffaa44" : "#66ccff" }}>
-            FPS: {debugFPS}
+          <div style={{ color: debugInfo.fps < 30 ? "#ff4444" : debugInfo.fps < 50 ? "#ffaa44" : "#66ccff" }}>
+            FPS: {debugInfo.fps}
           </div>
-          <div style={{ color: debugRegenCount > 5 ? "#ff4444" : debugRegenCount > 2 ? "#ffaa44" : "#66ccff" }}>
-            Regen/frame: {debugRegenCount}
+          <div style={{ color: debugInfo.regenCount > 5 ? "#ff4444" : debugInfo.regenCount > 2 ? "#ffaa44" : "#66ccff" }}>
+            Regen/frame: {debugInfo.regenCount}
           </div>
-          <div>Time: {debugTime.toFixed(2)}</div>
-          <div>Ring Z: {debugRingZ.toFixed(2)}</div>
-          <div>Hue: {debugHue.toFixed(0)}°</div>
+          <div>Time: {debugInfo.time.toFixed(2)}</div>
+          <div>Ring Z: {debugInfo.ringZ.toFixed(2)}</div>
+          <div>Hue: {debugInfo.hue.toFixed(0)}°</div>
         </div>
       )}
 
