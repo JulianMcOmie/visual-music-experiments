@@ -254,6 +254,7 @@ export default function Tunnel3D() {
   const [showControls, setShowControls] = useState(true);
   const [isPreview, setIsPreview] = useState(false);
   const pausedRef = useRef(false);
+  const hasLoadedFromStorage = useRef(false);
 
   // Debug values
   const [debugTime, setDebugTime] = useState(0);
@@ -325,6 +326,8 @@ export default function Tunnel3D() {
         console.error("Failed to load settings from localStorage:", e);
       }
     }
+    // Mark as loaded regardless of whether we found saved settings
+    hasLoadedFromStorage.current = true;
   }, []);
 
   useEffect(() => {
@@ -521,8 +524,11 @@ export default function Tunnel3D() {
     tubeThicknessOscMaxRef.current = tubeThicknessOscMax;
   }, [tubeThicknessOscEnabled, tubeThicknessOscFunction, tubeThicknessOscSpeed, tubeThicknessOscMin, tubeThicknessOscMax]);
 
-  // Save all settings to localStorage whenever they change
+  // Save all settings to localStorage whenever they change (but only after initial load)
   useEffect(() => {
+    // Don't save until we've loaded from localStorage first
+    if (!hasLoadedFromStorage.current) return;
+
     const settings = {
       speed,
       cameraRotation,
