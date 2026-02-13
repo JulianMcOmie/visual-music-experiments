@@ -3,13 +3,120 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
-type WaveFunction = "sin" | "cos" | "triangle" | "sawtooth";
+type WaveFunction =
+  | "sin"
+  | "cos"
+  | "triangle"
+  | "sawtooth"
+  | "bounce"
+  | "elastic"
+  | "circular"
+  | "exponential"
+  | "logarithmic"
+  | "pulse"
+  | "square"
+  | "smoothstep"
+  | "zigzag"
+  | "heart"
+  | "spiral"
+  | "wobble"
+  | "double-sin"
+  | "triple-sin"
+  | "chaos"
+  | "steps"
+  | "breath";
 
 const waveFunctions: Record<WaveFunction, (x: number) => number> = {
   sin: (x) => Math.sin(x),
   cos: (x) => Math.cos(x),
   triangle: (x) => Math.abs((x / Math.PI) % 2 - 1) * 2 - 1,
   sawtooth: (x) => 2 * (x / (2 * Math.PI) - Math.floor(x / (2 * Math.PI) + 0.5)),
+
+  // Bounce effect (like a bouncing ball)
+  bounce: (x) => {
+    const t = (x % (2 * Math.PI)) / (2 * Math.PI);
+    if (t < 0.25) return 8 * t * t;
+    if (t < 0.5) return 1 - 8 * (t - 0.25) * (t - 0.25);
+    if (t < 0.75) return 0.5 * (t - 0.5) * (t - 0.5);
+    return 1 - 2 * (t - 0.75) * (t - 0.75);
+  },
+
+  // Elastic spring effect
+  elastic: (x) => {
+    const t = Math.sin(x);
+    return t * Math.exp(-Math.abs(Math.sin(x * 0.5)));
+  },
+
+  // Circular arc motion
+  circular: (x) => Math.sqrt(1 - Math.pow(Math.sin(x), 2)) * Math.sign(Math.cos(x)),
+
+  // Exponential growth/decay
+  exponential: (x) => {
+    const normalized = (x % (2 * Math.PI)) / (2 * Math.PI);
+    return normalized < 0.5
+      ? Math.pow(2, 10 * (normalized - 0.5)) - 1
+      : 2 - Math.pow(2, -10 * (normalized - 0.5));
+  },
+
+  // Logarithmic curve
+  logarithmic: (x) => {
+    const t = (x % (2 * Math.PI)) / (2 * Math.PI);
+    return Math.log(1 + t * 9) / Math.log(10);
+  },
+
+  // Pulse wave (sharp transitions)
+  pulse: (x) => Math.sin(x) > 0.3 ? 1 : -1,
+
+  // Square wave
+  square: (x) => Math.sin(x) >= 0 ? 1 : -1,
+
+  // Smooth step function
+  smoothstep: (x) => {
+    const t = (Math.sin(x) + 1) / 2;
+    return t * t * (3 - 2 * t) * 2 - 1;
+  },
+
+  // Zigzag pattern
+  zigzag: (x) => {
+    const t = (x % (2 * Math.PI)) / (2 * Math.PI);
+    return t < 0.5 ? 4 * t - 1 : 3 - 4 * t;
+  },
+
+  // Heart-like curve
+  heart: (x) => {
+    const t = Math.sin(x);
+    return t * Math.abs(t) + 0.3 * Math.cos(x * 3);
+  },
+
+  // Spiral intensity
+  spiral: (x) => Math.sin(x) * (1 + 0.3 * Math.sin(x * 5)),
+
+  // Wobble effect
+  wobble: (x) => Math.sin(x) + 0.5 * Math.sin(x * 2.5) + 0.25 * Math.sin(x * 5),
+
+  // Double frequency sine
+  "double-sin": (x) => Math.sin(x) * Math.sin(x * 2),
+
+  // Triple layered sine
+  "triple-sin": (x) =>
+    0.5 * Math.sin(x) +
+    0.3 * Math.sin(x * 2) +
+    0.2 * Math.sin(x * 3),
+
+  // Chaotic/random-ish pattern
+  chaos: (x) => {
+    const seed = Math.floor(x / 0.5) * 0.5;
+    return Math.sin(seed * 12.9898 + x) * Math.cos(seed * 78.233);
+  },
+
+  // Step function
+  steps: (x) => Math.floor(Math.sin(x) * 4) / 4,
+
+  // Breathing pattern
+  breath: (x) => {
+    const t = (Math.sin(x) + 1) / 2;
+    return Math.pow(t, 0.5) * 2 - 1;
+  },
 };
 
 export default function Tunnel3D() {
@@ -290,7 +397,6 @@ export default function Tunnel3D() {
     if (!containerRef.current) return;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x000000, 1, 1000);
 
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -303,6 +409,17 @@ export default function Tunnel3D() {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     containerRef.current.appendChild(renderer.domElement);
+
+    // Helper function to apply color pattern override
+    const applyColorPattern = (material: THREE.MeshBasicMaterial, birthIndex: number, baseHue: number) => {
+      const pattern = colorPatternRef.current;
+
+      if (pattern === "every-5-white" && birthIndex % 5 === 0) {
+        material.color.setRGB(1, 1, 1); // White
+      } else {
+        material.color.setHSL(baseHue / 360, 0.8, 0.5);
+      }
+    };
 
     // Create tunnel rings
     const rings: THREE.Mesh[] = [];
@@ -361,17 +478,6 @@ export default function Tunnel3D() {
       const wave = waveFunctions[waveFunc];
       const normalizedWave = (wave(time * speed) + 1) / 2; // 0 to 1
       return min + normalizedWave * (max - min);
-    };
-
-    // Helper function to apply color pattern override
-    const applyColorPattern = (material: THREE.MeshBasicMaterial, birthIndex: number, baseHue: number) => {
-      const pattern = colorPatternRef.current;
-
-      if (pattern === "every-5-white" && birthIndex % 5 === 0) {
-        material.color.setRGB(1, 1, 1); // White
-      } else {
-        material.color.setHSL(baseHue / 360, 0.8, 0.5);
-      }
     };
 
     const animate = () => {
@@ -994,11 +1100,40 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Function:
-                  <select value={hueOscFunction} onChange={(e) => setHueOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
-                    <option value="sin">Sin</option>
-                    <option value="cos">Cos</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="sawtooth">Sawtooth</option>
+                  <select value={hueOscFunction} onChange={(e) => setHueOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
                   </select>
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
@@ -1028,11 +1163,40 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Function:
-                  <select value={radiusOscFunction} onChange={(e) => setRadiusOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
-                    <option value="sin">Sin</option>
-                    <option value="cos">Cos</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="sawtooth">Sawtooth</option>
+                  <select value={radiusOscFunction} onChange={(e) => setRadiusOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
                   </select>
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
@@ -1062,11 +1226,40 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Function:
-                  <select value={spacingOscFunction} onChange={(e) => setSpacingOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
-                    <option value="sin">Sin</option>
-                    <option value="cos">Cos</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="sawtooth">Sawtooth</option>
+                  <select value={spacingOscFunction} onChange={(e) => setSpacingOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
                   </select>
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
@@ -1096,11 +1289,40 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Function:
-                  <select value={segmentsOscFunction} onChange={(e) => setSegmentsOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
-                    <option value="sin">Sin</option>
-                    <option value="cos">Cos</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="sawtooth">Sawtooth</option>
+                  <select value={segmentsOscFunction} onChange={(e) => setSegmentsOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
                   </select>
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
@@ -1130,11 +1352,40 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Function:
-                  <select value={cameraRotationOscFunction} onChange={(e) => setCameraRotationOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
-                    <option value="sin">Sin</option>
-                    <option value="cos">Cos</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="sawtooth">Sawtooth</option>
+                  <select value={cameraRotationOscFunction} onChange={(e) => setCameraRotationOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
                   </select>
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
@@ -1164,11 +1415,40 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Function:
-                  <select value={rotationSpeedOscFunction} onChange={(e) => setRotationSpeedOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
-                    <option value="sin">Sin</option>
-                    <option value="cos">Cos</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="sawtooth">Sawtooth</option>
+                  <select value={rotationSpeedOscFunction} onChange={(e) => setRotationSpeedOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
                   </select>
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
@@ -1198,11 +1478,40 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Function:
-                  <select value={shapeRotationOscFunction} onChange={(e) => setShapeRotationOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
-                    <option value="sin">Sin</option>
-                    <option value="cos">Cos</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="sawtooth">Sawtooth</option>
+                  <select value={shapeRotationOscFunction} onChange={(e) => setShapeRotationOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
                   </select>
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
@@ -1232,11 +1541,40 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Function:
-                  <select value={tubeThicknessOscFunction} onChange={(e) => setTubeThicknessOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
-                    <option value="sin">Sin</option>
-                    <option value="cos">Cos</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="sawtooth">Sawtooth</option>
+                  <select value={tubeThicknessOscFunction} onChange={(e) => setTubeThicknessOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
                   </select>
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
