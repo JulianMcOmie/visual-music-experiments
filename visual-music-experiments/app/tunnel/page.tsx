@@ -1692,11 +1692,11 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {hueOscMin}
-                  <input type="range" min="0" max="360" step="1" value={hueOscMin} onChange={(e) => setHueOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0" max="360" step="0.01" value={hueOscMin} onChange={(e) => setHueOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", fontSize: "12px" }}>
                   Max: {hueOscMax}
-                  <input type="range" min="0" max="360" step="1" value={hueOscMax} onChange={(e) => setHueOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0" max="360" step="0.01" value={hueOscMax} onChange={(e) => setHueOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
               </div>
             </details>
@@ -1755,11 +1755,11 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {radiusOscMin.toFixed(1)}
-                  <input type="range" min="2" max="1000" step="0.1" value={radiusOscMin} onChange={(e) => setRadiusOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="2" max="1000" step="0.01" value={radiusOscMin} onChange={(e) => setRadiusOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", fontSize: "12px" }}>
                   Max: {radiusOscMax.toFixed(1)}
-                  <input type="range" min="2" max="1000" step="0.1" value={radiusOscMax} onChange={(e) => setRadiusOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="2" max="1000" step="0.01" value={radiusOscMax} onChange={(e) => setRadiusOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
               </div>
             </details>
@@ -1818,11 +1818,11 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {spacingOscMin.toFixed(1)}
-                  <input type="range" min="0.5" max="5" step="0.1" value={spacingOscMin} onChange={(e) => setSpacingOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0.5" max="5" step="0.01" value={spacingOscMin} onChange={(e) => setSpacingOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", fontSize: "12px" }}>
                   Max: {spacingOscMax.toFixed(1)}
-                  <input type="range" min="0.5" max="5" step="0.1" value={spacingOscMax} onChange={(e) => setSpacingOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0.5" max="5" step="0.01" value={spacingOscMax} onChange={(e) => setSpacingOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
               </div>
             </details>
@@ -1881,11 +1881,11 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {segmentsOscMin}
-                  <input type="range" min="3" max="64" step="1" value={segmentsOscMin} onChange={(e) => setSegmentsOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="3" max="64" step="0.01" value={segmentsOscMin} onChange={(e) => setSegmentsOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", fontSize: "12px" }}>
                   Max: {segmentsOscMax}
-                  <input type="range" min="3" max="64" step="1" value={segmentsOscMax} onChange={(e) => setSegmentsOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="3" max="64" step="0.01" value={segmentsOscMax} onChange={(e) => setSegmentsOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
               </div>
             </details>
@@ -2007,11 +2007,11 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {rotationSpeedOscMin.toFixed(2)}
-                  <input type="range" min="-50" max="50" step="0.1" value={rotationSpeedOscMin} onChange={(e) => setRotationSpeedOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="-50" max="50" step="0.01" value={rotationSpeedOscMin} onChange={(e) => setRotationSpeedOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", fontSize: "12px" }}>
                   Max: {rotationSpeedOscMax.toFixed(2)}
-                  <input type="range" min="-50" max="50" step="0.1" value={rotationSpeedOscMax} onChange={(e) => setRotationSpeedOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="-50" max="50" step="0.01" value={rotationSpeedOscMax} onChange={(e) => setRotationSpeedOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
               </div>
             </details>
