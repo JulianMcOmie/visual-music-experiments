@@ -1018,6 +1018,12 @@ export default function Tunnel3D() {
           });
         }
 
+        // Calculate minimum Z once for all regenerations this frame
+        let minZ = Infinity;
+        for (let i = 0; i < rings.length; i++) {
+          if (rings[i].position.z < minZ) minZ = rings[i].position.z;
+        }
+
         // Then reset rings that passed the camera (after all movement is complete)
         rings.forEach((ring, i) => {
           if (ring.position.z > 5) {
@@ -1103,10 +1109,10 @@ export default function Tunnel3D() {
               brightnessOscMaxRef.current
             );
 
-            // Find the furthest back ring (after all movement is done)
-            const minZ = Math.min(...rings.map(r => r.position.z));
-            // Place this ring using oscillated spacing
+            // Place this ring behind the furthest back ring
             ring.position.z = minZ - currentSpacing;
+            // Update minZ for next ring that might regenerate this frame
+            minZ = ring.position.z;
 
             // Only regenerate geometry if parameters changed significantly
             const oldRadius = ring.userData.radius;
