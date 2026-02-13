@@ -254,7 +254,7 @@ export default function Tunnel3D() {
   const [showControls, setShowControls] = useState(true);
   const [isPreview, setIsPreview] = useState(false);
   const pausedRef = useRef(false);
-  const hasLoadedFromStorage = useRef(false);
+  const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
 
   // Debug values
   const [debugTime, setDebugTime] = useState(0);
@@ -327,7 +327,8 @@ export default function Tunnel3D() {
       }
     }
     // Mark as loaded regardless of whether we found saved settings
-    hasLoadedFromStorage.current = true;
+    // Use setTimeout to ensure state updates have been processed
+    setTimeout(() => setHasLoadedFromStorage(true), 0);
   }, []);
 
   useEffect(() => {
@@ -527,7 +528,7 @@ export default function Tunnel3D() {
   // Save all settings to localStorage whenever they change (but only after initial load)
   useEffect(() => {
     // Don't save until we've loaded from localStorage first
-    if (!hasLoadedFromStorage.current) return;
+    if (!hasLoadedFromStorage) return;
 
     const settings = {
       speed,
