@@ -1108,15 +1108,25 @@ export default function Tunnel3D() {
             // Place this ring using oscillated spacing
             ring.position.z = minZ - currentSpacing;
 
-            // Regenerate with oscillated generation constants
-            ring.geometry.dispose();
-            ring.geometry = new THREE.TorusGeometry(
-              currentRadius,
-              currentTubeThickness,
-              16,
-              currentSegments
-            );
-            regenThisFrame++;
+            // Only regenerate geometry if parameters changed significantly
+            const oldRadius = ring.userData.radius;
+            const oldSegments = ring.userData.segments;
+            const oldThickness = ring.userData.tubeThickness;
+            const needsRegen =
+              Math.abs(oldRadius - currentRadius) > 0.1 ||
+              oldSegments !== currentSegments ||
+              Math.abs(oldThickness - currentTubeThickness) > 0.01;
+
+            if (needsRegen) {
+              ring.geometry.dispose();
+              ring.geometry = new THREE.TorusGeometry(
+                currentRadius,
+                currentTubeThickness,
+                16,
+                currentSegments
+              );
+              regenThisFrame++;
+            }
 
             // Apply shape rotation (base rotation + rotation speed offset)
             ring.rotation.z = currentShapeRotation + currentRotationSpeed;
