@@ -286,6 +286,8 @@ export default function Tunnel3D() {
   const [debugTime, setDebugTime] = useState(0);
   const [debugRingZ, setDebugRingZ] = useState(0);
   const [debugHue, setDebugHue] = useState(0);
+  const [debugFPS, setDebugFPS] = useState(0);
+  const [debugRegenCount, setDebugRegenCount] = useState(0);
 
   // Load settings from localStorage after mount (client-side only)
   useEffect(() => {
@@ -904,6 +906,9 @@ export default function Tunnel3D() {
     let time = 0;
     let frameCount = 0;
     let lastBurstTime = 0;
+    let lastFrameTime = performance.now();
+    let fps = 60;
+    let regenThisFrame = 0;
 
     // Helper function to calculate oscillated value
     const getOscillatedValue = (
@@ -921,6 +926,13 @@ export default function Tunnel3D() {
     };
 
     const animate = () => {
+      // FPS tracking
+      const now = performance.now();
+      const delta = now - lastFrameTime;
+      lastFrameTime = now;
+      fps = 1000 / delta;
+      regenThisFrame = 0;
+
       if (!pausedRef.current) {
         time += 0.01;
 
@@ -1104,6 +1116,7 @@ export default function Tunnel3D() {
               16,
               currentSegments
             );
+            regenThisFrame++;
 
             // Apply shape rotation (base rotation + rotation speed offset)
             ring.rotation.z = currentShapeRotation + currentRotationSpeed;
@@ -1130,6 +1143,8 @@ export default function Tunnel3D() {
             setDebugTime(time);
             setDebugRingZ(ring.position.z);
             setDebugHue(ring.userData.hue);
+            setDebugFPS(Math.round(fps));
+            setDebugRegenCount(regenThisFrame);
           }
         });
 
@@ -1182,6 +1197,12 @@ export default function Tunnel3D() {
             border: "1px solid rgba(102, 204, 255, 0.3)",
           }}
         >
+          <div style={{ color: debugFPS < 30 ? "#ff4444" : debugFPS < 50 ? "#ffaa44" : "#66ccff" }}>
+            FPS: {debugFPS}
+          </div>
+          <div style={{ color: debugRegenCount > 5 ? "#ff4444" : debugRegenCount > 2 ? "#ffaa44" : "#66ccff" }}>
+            Regen/frame: {debugRegenCount}
+          </div>
           <div>Time: {debugTime.toFixed(2)}</div>
           <div>Ring Z: {debugRingZ.toFixed(2)}</div>
           <div>Hue: {debugHue.toFixed(0)}°</div>
