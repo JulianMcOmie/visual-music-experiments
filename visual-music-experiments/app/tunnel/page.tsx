@@ -1504,7 +1504,7 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Speed: {hueOscSpeed.toFixed(2)}
-                  <input type="range" min="0.001" max="5" step="0.01" value={hueOscSpeed} onChange={(e) => setHueOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0.001" max="5" step="0.001" value={hueOscSpeed} onChange={(e) => setHueOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {hueOscMin}
@@ -1567,7 +1567,7 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Speed: {radiusOscSpeed.toFixed(2)}
-                  <input type="range" min="0.001" max="5" step="0.01" value={radiusOscSpeed} onChange={(e) => setRadiusOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0.001" max="5" step="0.001" value={radiusOscSpeed} onChange={(e) => setRadiusOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {radiusOscMin.toFixed(1)}
@@ -1630,7 +1630,7 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Speed: {spacingOscSpeed.toFixed(2)}
-                  <input type="range" min="0.001" max="5" step="0.01" value={spacingOscSpeed} onChange={(e) => setSpacingOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0.001" max="5" step="0.001" value={spacingOscSpeed} onChange={(e) => setSpacingOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {spacingOscMin.toFixed(1)}
@@ -1693,7 +1693,7 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Speed: {segmentsOscSpeed.toFixed(2)}
-                  <input type="range" min="0.001" max="5" step="0.01" value={segmentsOscSpeed} onChange={(e) => setSegmentsOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0.001" max="5" step="0.001" value={segmentsOscSpeed} onChange={(e) => setSegmentsOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {segmentsOscMin}
@@ -1756,7 +1756,7 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Speed: {cameraRotationOscSpeed.toFixed(2)}
-                  <input type="range" min="0.001" max="5" step="0.01" value={cameraRotationOscSpeed} onChange={(e) => setCameraRotationOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0.001" max="5" step="0.001" value={cameraRotationOscSpeed} onChange={(e) => setCameraRotationOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {(cameraRotationOscMin * 180 / Math.PI).toFixed(0)}°
@@ -1819,7 +1819,7 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Speed: {rotationSpeedOscSpeed.toFixed(2)}
-                  <input type="range" min="0.001" max="5" step="0.01" value={rotationSpeedOscSpeed} onChange={(e) => setRotationSpeedOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0.001" max="5" step="0.001" value={rotationSpeedOscSpeed} onChange={(e) => setRotationSpeedOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {rotationSpeedOscMin.toFixed(2)}
@@ -1882,7 +1882,7 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Speed: {shapeRotationOscSpeed.toFixed(2)}
-                  <input type="range" min="0.001" max="5" step="0.01" value={shapeRotationOscSpeed} onChange={(e) => setShapeRotationOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0.001" max="5" step="0.001" value={shapeRotationOscSpeed} onChange={(e) => setShapeRotationOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {(shapeRotationOscMin * 180 / Math.PI).toFixed(0)}°
@@ -1945,7 +1945,7 @@ export default function Tunnel3D() {
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Speed: {tubeThicknessOscSpeed.toFixed(2)}
-                  <input type="range" min="0.001" max="5" step="0.01" value={tubeThicknessOscSpeed} onChange={(e) => setTubeThicknessOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <input type="range" min="0.001" max="5" step="0.001" value={tubeThicknessOscSpeed} onChange={(e) => setTubeThicknessOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min: {tubeThicknessOscMin.toFixed(2)}
