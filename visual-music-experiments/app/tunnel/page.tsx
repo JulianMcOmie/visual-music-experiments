@@ -909,6 +909,7 @@ export default function Tunnel3D() {
     let lastFrameTime = performance.now();
     let fps = 60;
     let regenThisFrame = 0;
+    let wasBurstEnabled = burstEnabledRef.current;
 
     // Helper function to calculate oscillated value
     const getOscillatedValue = (
@@ -996,10 +997,11 @@ export default function Tunnel3D() {
                 16,
                 segments
               );
+              regenThisFrame++;
             }
           });
-        } else {
-          // Reset to original radius when burst is disabled
+        } else if (wasBurstEnabled) {
+          // Reset to original radius ONCE when burst is first disabled
           rings.forEach((ring) => {
             const originalRadius = ring.userData.radius;
             const segments = ring.userData.segments;
@@ -1014,9 +1016,13 @@ export default function Tunnel3D() {
                 16,
                 segments
               );
+              regenThisFrame++;
             }
           });
         }
+
+        // Track burst state for next frame
+        wasBurstEnabled = burstEnabledRef.current;
 
         // Calculate minimum Z once for all regenerations this frame
         let minZ = Infinity;
