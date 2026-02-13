@@ -17,6 +17,7 @@ export default function Tunnel3D() {
   const [speed, setSpeed] = useState(2);
   const [cameraRotation, setCameraRotation] = useState(0);
   const [numRings, setNumRings] = useState(50);
+  const [colorPattern, setColorPattern] = useState<string>("none");
 
   // Generation constants - determine how new rings are created
   const [generationHue, setGenerationHue] = useState(180);
@@ -111,6 +112,7 @@ export default function Tunnel3D() {
 
   const speedRef = useRef(speed);
   const cameraRotationRef = useRef(cameraRotation);
+  const colorPatternRef = useRef(colorPattern);
   const generationHueRef = useRef(generationHue);
   const generationRadiusRef = useRef(generationRadius);
   const generationSpacingRef = useRef(generationSpacing);
@@ -187,6 +189,10 @@ export default function Tunnel3D() {
   useEffect(() => {
     cameraRotationRef.current = cameraRotation;
   }, [cameraRotation]);
+
+  useEffect(() => {
+    colorPatternRef.current = colorPattern;
+  }, [colorPattern]);
 
   useEffect(() => {
     shapeRotationRef.current = shapeRotation;
@@ -311,12 +317,14 @@ export default function Tunnel3D() {
       // Hue is exactly the generation constant, not calculated from ring index
       const hue = generationHueRef.current;
       const material = new THREE.MeshBasicMaterial({
-        color: new THREE.Color().setHSL(hue / 360, 0.8, 0.5),
         wireframe: false,
       });
       const ring = new THREE.Mesh(geometry, material);
       ring.position.z = -i * generationSpacingRef.current;
       ring.rotation.z = shapeRotationRef.current + rotationSpeedRef.current;
+
+      // Apply color with pattern consideration (will be set after userData is defined)
+      const birthIndex = i;
 
       // Bake ring properties from generation constants
       ring.userData = {
@@ -326,8 +334,11 @@ export default function Tunnel3D() {
         spacing: generationSpacingRef.current,
         shapeRotation: shapeRotationRef.current,
         tubeThickness: tubeThicknessRef.current,
-        birthIndex: i,
+        birthIndex: birthIndex,
       };
+
+      // Apply color with pattern override if applicable
+      applyColorPattern(ring.material as THREE.MeshBasicMaterial, birthIndex, hue);
 
       scene.add(ring);
       rings.push(ring);
@@ -350,6 +361,17 @@ export default function Tunnel3D() {
       const wave = waveFunctions[waveFunc];
       const normalizedWave = (wave(time * speed) + 1) / 2; // 0 to 1
       return min + normalizedWave * (max - min);
+    };
+
+    // Helper function to apply color pattern override
+    const applyColorPattern = (material: THREE.MeshBasicMaterial, birthIndex: number, baseHue: number) => {
+      const pattern = colorPatternRef.current;
+
+      if (pattern === "every-5-white" && birthIndex % 5 === 0) {
+        material.color.setRGB(1, 1, 1); // White
+      } else {
+        material.color.setHSL(baseHue / 360, 0.8, 0.5);
+      }
     };
 
     const animate = () => {
@@ -533,12 +555,8 @@ export default function Tunnel3D() {
               birthIndex: ring.userData.birthIndex,
             };
 
-            // Set the color to the new baked hue
-            (ring.material as THREE.MeshBasicMaterial).color.setHSL(
-              currentHue / 360,
-              0.8,
-              0.5
-            );
+            // Apply color with pattern override if applicable
+            applyColorPattern(ring.material as THREE.MeshBasicMaterial, ring.userData.birthIndex, currentHue);
           }
 
           // Update debug values every 5 frames
@@ -672,6 +690,36 @@ export default function Tunnel3D() {
               onChange={(e) => setNumRings(Number(e.target.value))}
               style={{ width: "100%" }}
             />
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              htmlFor="colorPattern"
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                color: "#fff",
+              }}
+            >
+              Color Pattern
+            </label>
+            <select
+              id="colorPattern"
+              value={colorPattern}
+              onChange={(e) => setColorPattern(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px",
+                background: "#222",
+                color: "#fff",
+                border: "1px solid #444",
+                borderRadius: "4px"
+              }}
+            >
+              <option value="none">None</option>
+              <option value="every-5-white">Every 5 White</option>
+            </select>
           </div>
 
           <div style={{ marginBottom: "20px" }}>
