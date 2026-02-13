@@ -119,76 +119,152 @@ const waveFunctions: Record<WaveFunction, (x: number) => number> = {
   },
 };
 
+// Default settings
+const DEFAULT_SETTINGS = {
+  speed: 2,
+  cameraRotation: 0,
+  numRings: 50,
+  colorPattern: "none",
+  generationHue: 180,
+  generationRadius: 5,
+  generationSpacing: 2,
+  generationSegments: 3,
+  tubeThickness: 0.2,
+  shapeRotation: 0,
+  rotationSpeed: 0,
+  burstEnabled: false,
+  burstInterval: 2,
+  burstMagnitude: 1.5,
+  burstDecay: 20,
+  hueOscEnabled: false,
+  hueOscFunction: "sin" as WaveFunction,
+  hueOscSpeed: 1,
+  hueOscMin: 0,
+  hueOscMax: 360,
+  radiusOscEnabled: false,
+  radiusOscFunction: "sin" as WaveFunction,
+  radiusOscSpeed: 1,
+  radiusOscMin: 2,
+  radiusOscMax: 1000,
+  spacingOscEnabled: false,
+  spacingOscFunction: "sin" as WaveFunction,
+  spacingOscSpeed: 1,
+  spacingOscMin: 0.5,
+  spacingOscMax: 5,
+  segmentsOscEnabled: false,
+  segmentsOscFunction: "sin" as WaveFunction,
+  segmentsOscSpeed: 1,
+  segmentsOscMin: 3,
+  segmentsOscMax: 64,
+  cameraRotationOscEnabled: false,
+  cameraRotationOscFunction: "sin" as WaveFunction,
+  cameraRotationOscSpeed: 1,
+  cameraRotationOscMin: 0,
+  cameraRotationOscMax: Math.PI * 2,
+  rotationSpeedOscEnabled: false,
+  rotationSpeedOscFunction: "sin" as WaveFunction,
+  rotationSpeedOscSpeed: 1,
+  rotationSpeedOscMin: -10,
+  rotationSpeedOscMax: 10,
+  shapeRotationOscEnabled: false,
+  shapeRotationOscFunction: "sin" as WaveFunction,
+  shapeRotationOscSpeed: 1,
+  shapeRotationOscMin: 0,
+  shapeRotationOscMax: Math.PI * 2,
+  tubeThicknessOscEnabled: false,
+  tubeThicknessOscFunction: "sin" as WaveFunction,
+  tubeThicknessOscSpeed: 1,
+  tubeThicknessOscMin: 0.05,
+  tubeThicknessOscMax: 1,
+};
+
 export default function Tunnel3D() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [speed, setSpeed] = useState(2);
-  const [cameraRotation, setCameraRotation] = useState(0);
-  const [numRings, setNumRings] = useState(50);
-  const [colorPattern, setColorPattern] = useState<string>("none");
+
+  // Load settings from localStorage or use defaults
+  const loadSettings = () => {
+    if (typeof window === "undefined") return DEFAULT_SETTINGS;
+    const saved = localStorage.getItem("tunnel3d-settings");
+    if (saved) {
+      try {
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+      } catch {
+        return DEFAULT_SETTINGS;
+      }
+    }
+    return DEFAULT_SETTINGS;
+  };
+
+  const initialSettings = loadSettings();
+
+  const [speed, setSpeed] = useState(initialSettings.speed);
+  const [cameraRotation, setCameraRotation] = useState(initialSettings.cameraRotation);
+  const [numRings, setNumRings] = useState(initialSettings.numRings);
+  const [colorPattern, setColorPattern] = useState<string>(initialSettings.colorPattern);
 
   // Generation constants - determine how new rings are created
-  const [generationHue, setGenerationHue] = useState(180);
-  const [generationRadius, setGenerationRadius] = useState(5);
-  const [generationSpacing, setGenerationSpacing] = useState(2);
-  const [generationSegments, setGenerationSegments] = useState(3);
-  const [tubeThickness, setTubeThickness] = useState(0.2);
-  const [shapeRotation, setShapeRotation] = useState(0);
-  const [rotationSpeed, setRotationSpeed] = useState(0);
+  const [generationHue, setGenerationHue] = useState(initialSettings.generationHue);
+  const [generationRadius, setGenerationRadius] = useState(initialSettings.generationRadius);
+  const [generationSpacing, setGenerationSpacing] = useState(initialSettings.generationSpacing);
+  const [generationSegments, setGenerationSegments] = useState(initialSettings.generationSegments);
+  const [tubeThickness, setTubeThickness] = useState(initialSettings.tubeThickness);
+  const [shapeRotation, setShapeRotation] = useState(initialSettings.shapeRotation);
+  const [rotationSpeed, setRotationSpeed] = useState(initialSettings.rotationSpeed);
 
   // Oscillators for generation constants
-  const [hueOscEnabled, setHueOscEnabled] = useState(false);
-  const [hueOscFunction, setHueOscFunction] = useState<WaveFunction>("sin");
-  const [hueOscSpeed, setHueOscSpeed] = useState(1);
-  const [hueOscMin, setHueOscMin] = useState(0);
-  const [hueOscMax, setHueOscMax] = useState(360);
+  const [hueOscEnabled, setHueOscEnabled] = useState(initialSettings.hueOscEnabled);
+  const [hueOscFunction, setHueOscFunction] = useState<WaveFunction>(initialSettings.hueOscFunction);
+  const [hueOscSpeed, setHueOscSpeed] = useState(initialSettings.hueOscSpeed);
+  const [hueOscMin, setHueOscMin] = useState(initialSettings.hueOscMin);
+  const [hueOscMax, setHueOscMax] = useState(initialSettings.hueOscMax);
 
-  const [radiusOscEnabled, setRadiusOscEnabled] = useState(false);
-  const [radiusOscFunction, setRadiusOscFunction] = useState<WaveFunction>("sin");
-  const [radiusOscSpeed, setRadiusOscSpeed] = useState(1);
-  const [radiusOscMin, setRadiusOscMin] = useState(2);
-  const [radiusOscMax, setRadiusOscMax] = useState(1000);
+  const [radiusOscEnabled, setRadiusOscEnabled] = useState(initialSettings.radiusOscEnabled);
+  const [radiusOscFunction, setRadiusOscFunction] = useState<WaveFunction>(initialSettings.radiusOscFunction);
+  const [radiusOscSpeed, setRadiusOscSpeed] = useState(initialSettings.radiusOscSpeed);
+  const [radiusOscMin, setRadiusOscMin] = useState(initialSettings.radiusOscMin);
+  const [radiusOscMax, setRadiusOscMax] = useState(initialSettings.radiusOscMax);
 
-  const [spacingOscEnabled, setSpacingOscEnabled] = useState(false);
-  const [spacingOscFunction, setSpacingOscFunction] = useState<WaveFunction>("sin");
-  const [spacingOscSpeed, setSpacingOscSpeed] = useState(1);
-  const [spacingOscMin, setSpacingOscMin] = useState(0.5);
-  const [spacingOscMax, setSpacingOscMax] = useState(5);
+  const [spacingOscEnabled, setSpacingOscEnabled] = useState(initialSettings.spacingOscEnabled);
+  const [spacingOscFunction, setSpacingOscFunction] = useState<WaveFunction>(initialSettings.spacingOscFunction);
+  const [spacingOscSpeed, setSpacingOscSpeed] = useState(initialSettings.spacingOscSpeed);
+  const [spacingOscMin, setSpacingOscMin] = useState(initialSettings.spacingOscMin);
+  const [spacingOscMax, setSpacingOscMax] = useState(initialSettings.spacingOscMax);
 
-  const [segmentsOscEnabled, setSegmentsOscEnabled] = useState(false);
-  const [segmentsOscFunction, setSegmentsOscFunction] = useState<WaveFunction>("sin");
-  const [segmentsOscSpeed, setSegmentsOscSpeed] = useState(1);
-  const [segmentsOscMin, setSegmentsOscMin] = useState(3);
-  const [segmentsOscMax, setSegmentsOscMax] = useState(64);
+  const [segmentsOscEnabled, setSegmentsOscEnabled] = useState(initialSettings.segmentsOscEnabled);
+  const [segmentsOscFunction, setSegmentsOscFunction] = useState<WaveFunction>(initialSettings.segmentsOscFunction);
+  const [segmentsOscSpeed, setSegmentsOscSpeed] = useState(initialSettings.segmentsOscSpeed);
+  const [segmentsOscMin, setSegmentsOscMin] = useState(initialSettings.segmentsOscMin);
+  const [segmentsOscMax, setSegmentsOscMax] = useState(initialSettings.segmentsOscMax);
 
-  const [cameraRotationOscEnabled, setCameraRotationOscEnabled] = useState(false);
-  const [cameraRotationOscFunction, setCameraRotationOscFunction] = useState<WaveFunction>("sin");
-  const [cameraRotationOscSpeed, setCameraRotationOscSpeed] = useState(1);
-  const [cameraRotationOscMin, setCameraRotationOscMin] = useState(0);
-  const [cameraRotationOscMax, setCameraRotationOscMax] = useState(Math.PI * 2);
+  const [cameraRotationOscEnabled, setCameraRotationOscEnabled] = useState(initialSettings.cameraRotationOscEnabled);
+  const [cameraRotationOscFunction, setCameraRotationOscFunction] = useState<WaveFunction>(initialSettings.cameraRotationOscFunction);
+  const [cameraRotationOscSpeed, setCameraRotationOscSpeed] = useState(initialSettings.cameraRotationOscSpeed);
+  const [cameraRotationOscMin, setCameraRotationOscMin] = useState(initialSettings.cameraRotationOscMin);
+  const [cameraRotationOscMax, setCameraRotationOscMax] = useState(initialSettings.cameraRotationOscMax);
 
-  const [rotationSpeedOscEnabled, setRotationSpeedOscEnabled] = useState(false);
-  const [rotationSpeedOscFunction, setRotationSpeedOscFunction] = useState<WaveFunction>("sin");
-  const [rotationSpeedOscSpeed, setRotationSpeedOscSpeed] = useState(1);
-  const [rotationSpeedOscMin, setRotationSpeedOscMin] = useState(-10);
-  const [rotationSpeedOscMax, setRotationSpeedOscMax] = useState(10);
+  const [rotationSpeedOscEnabled, setRotationSpeedOscEnabled] = useState(initialSettings.rotationSpeedOscEnabled);
+  const [rotationSpeedOscFunction, setRotationSpeedOscFunction] = useState<WaveFunction>(initialSettings.rotationSpeedOscFunction);
+  const [rotationSpeedOscSpeed, setRotationSpeedOscSpeed] = useState(initialSettings.rotationSpeedOscSpeed);
+  const [rotationSpeedOscMin, setRotationSpeedOscMin] = useState(initialSettings.rotationSpeedOscMin);
+  const [rotationSpeedOscMax, setRotationSpeedOscMax] = useState(initialSettings.rotationSpeedOscMax);
 
-  const [shapeRotationOscEnabled, setShapeRotationOscEnabled] = useState(false);
-  const [shapeRotationOscFunction, setShapeRotationOscFunction] = useState<WaveFunction>("sin");
-  const [shapeRotationOscSpeed, setShapeRotationOscSpeed] = useState(1);
-  const [shapeRotationOscMin, setShapeRotationOscMin] = useState(0);
-  const [shapeRotationOscMax, setShapeRotationOscMax] = useState(Math.PI * 2);
+  const [shapeRotationOscEnabled, setShapeRotationOscEnabled] = useState(initialSettings.shapeRotationOscEnabled);
+  const [shapeRotationOscFunction, setShapeRotationOscFunction] = useState<WaveFunction>(initialSettings.shapeRotationOscFunction);
+  const [shapeRotationOscSpeed, setShapeRotationOscSpeed] = useState(initialSettings.shapeRotationOscSpeed);
+  const [shapeRotationOscMin, setShapeRotationOscMin] = useState(initialSettings.shapeRotationOscMin);
+  const [shapeRotationOscMax, setShapeRotationOscMax] = useState(initialSettings.shapeRotationOscMax);
 
-  const [tubeThicknessOscEnabled, setTubeThicknessOscEnabled] = useState(false);
-  const [tubeThicknessOscFunction, setTubeThicknessOscFunction] = useState<WaveFunction>("sin");
-  const [tubeThicknessOscSpeed, setTubeThicknessOscSpeed] = useState(1);
-  const [tubeThicknessOscMin, setTubeThicknessOscMin] = useState(0.05);
-  const [tubeThicknessOscMax, setTubeThicknessOscMax] = useState(1);
+  const [tubeThicknessOscEnabled, setTubeThicknessOscEnabled] = useState(initialSettings.tubeThicknessOscEnabled);
+  const [tubeThicknessOscFunction, setTubeThicknessOscFunction] = useState<WaveFunction>(initialSettings.tubeThicknessOscFunction);
+  const [tubeThicknessOscSpeed, setTubeThicknessOscSpeed] = useState(initialSettings.tubeThicknessOscSpeed);
+  const [tubeThicknessOscMin, setTubeThicknessOscMin] = useState(initialSettings.tubeThicknessOscMin);
+  const [tubeThicknessOscMax, setTubeThicknessOscMax] = useState(initialSettings.tubeThicknessOscMax);
 
   // Burst parameters
-  const [burstEnabled, setBurstEnabled] = useState(false);
-  const [burstInterval, setBurstInterval] = useState(2); // seconds between bursts
-  const [burstMagnitude, setBurstMagnitude] = useState(1.5); // scale multiplier
-  const [burstDecay, setBurstDecay] = useState(20); // decay rate (higher = faster decay)
+  const [burstEnabled, setBurstEnabled] = useState(initialSettings.burstEnabled);
+  const [burstInterval, setBurstInterval] = useState(initialSettings.burstInterval);
+  const [burstMagnitude, setBurstMagnitude] = useState(initialSettings.burstMagnitude);
+  const [burstDecay, setBurstDecay] = useState(initialSettings.burstDecay);
 
   const [showControls, setShowControls] = useState(true);
   const [isPreview, setIsPreview] = useState(false);
@@ -392,6 +468,195 @@ export default function Tunnel3D() {
     tubeThicknessOscMinRef.current = tubeThicknessOscMin;
     tubeThicknessOscMaxRef.current = tubeThicknessOscMax;
   }, [tubeThicknessOscEnabled, tubeThicknessOscFunction, tubeThicknessOscSpeed, tubeThicknessOscMin, tubeThicknessOscMax]);
+
+  // Save all settings to localStorage whenever they change
+  useEffect(() => {
+    const settings = {
+      speed,
+      cameraRotation,
+      numRings,
+      colorPattern,
+      generationHue,
+      generationRadius,
+      generationSpacing,
+      generationSegments,
+      tubeThickness,
+      shapeRotation,
+      rotationSpeed,
+      burstEnabled,
+      burstInterval,
+      burstMagnitude,
+      burstDecay,
+      hueOscEnabled,
+      hueOscFunction,
+      hueOscSpeed,
+      hueOscMin,
+      hueOscMax,
+      radiusOscEnabled,
+      radiusOscFunction,
+      radiusOscSpeed,
+      radiusOscMin,
+      radiusOscMax,
+      spacingOscEnabled,
+      spacingOscFunction,
+      spacingOscSpeed,
+      spacingOscMin,
+      spacingOscMax,
+      segmentsOscEnabled,
+      segmentsOscFunction,
+      segmentsOscSpeed,
+      segmentsOscMin,
+      segmentsOscMax,
+      cameraRotationOscEnabled,
+      cameraRotationOscFunction,
+      cameraRotationOscSpeed,
+      cameraRotationOscMin,
+      cameraRotationOscMax,
+      rotationSpeedOscEnabled,
+      rotationSpeedOscFunction,
+      rotationSpeedOscSpeed,
+      rotationSpeedOscMin,
+      rotationSpeedOscMax,
+      shapeRotationOscEnabled,
+      shapeRotationOscFunction,
+      shapeRotationOscSpeed,
+      shapeRotationOscMin,
+      shapeRotationOscMax,
+      tubeThicknessOscEnabled,
+      tubeThicknessOscFunction,
+      tubeThicknessOscSpeed,
+      tubeThicknessOscMin,
+      tubeThicknessOscMax,
+    };
+    localStorage.setItem("tunnel3d-settings", JSON.stringify(settings));
+  }, [
+    speed,
+    cameraRotation,
+    numRings,
+    colorPattern,
+    generationHue,
+    generationRadius,
+    generationSpacing,
+    generationSegments,
+    tubeThickness,
+    shapeRotation,
+    rotationSpeed,
+    burstEnabled,
+    burstInterval,
+    burstMagnitude,
+    burstDecay,
+    hueOscEnabled,
+    hueOscFunction,
+    hueOscSpeed,
+    hueOscMin,
+    hueOscMax,
+    radiusOscEnabled,
+    radiusOscFunction,
+    radiusOscSpeed,
+    radiusOscMin,
+    radiusOscMax,
+    spacingOscEnabled,
+    spacingOscFunction,
+    spacingOscSpeed,
+    spacingOscMin,
+    spacingOscMax,
+    segmentsOscEnabled,
+    segmentsOscFunction,
+    segmentsOscSpeed,
+    segmentsOscMin,
+    segmentsOscMax,
+    cameraRotationOscEnabled,
+    cameraRotationOscFunction,
+    cameraRotationOscSpeed,
+    cameraRotationOscMin,
+    cameraRotationOscMax,
+    rotationSpeedOscEnabled,
+    rotationSpeedOscFunction,
+    rotationSpeedOscSpeed,
+    rotationSpeedOscMin,
+    rotationSpeedOscMax,
+    shapeRotationOscEnabled,
+    shapeRotationOscFunction,
+    shapeRotationOscSpeed,
+    shapeRotationOscMin,
+    shapeRotationOscMax,
+    tubeThicknessOscEnabled,
+    tubeThicknessOscFunction,
+    tubeThicknessOscSpeed,
+    tubeThicknessOscMin,
+    tubeThicknessOscMax,
+  ]);
+
+  // Clear all oscillators function
+  const clearAllOscillators = () => {
+    setHueOscEnabled(false);
+    setRadiusOscEnabled(false);
+    setSpacingOscEnabled(false);
+    setSegmentsOscEnabled(false);
+    setCameraRotationOscEnabled(false);
+    setRotationSpeedOscEnabled(false);
+    setShapeRotationOscEnabled(false);
+    setTubeThicknessOscEnabled(false);
+  };
+
+  // Reset all settings to defaults
+  const resetAllSettings = () => {
+    setSpeed(DEFAULT_SETTINGS.speed);
+    setCameraRotation(DEFAULT_SETTINGS.cameraRotation);
+    setNumRings(DEFAULT_SETTINGS.numRings);
+    setColorPattern(DEFAULT_SETTINGS.colorPattern);
+    setGenerationHue(DEFAULT_SETTINGS.generationHue);
+    setGenerationRadius(DEFAULT_SETTINGS.generationRadius);
+    setGenerationSpacing(DEFAULT_SETTINGS.generationSpacing);
+    setGenerationSegments(DEFAULT_SETTINGS.generationSegments);
+    setTubeThickness(DEFAULT_SETTINGS.tubeThickness);
+    setShapeRotation(DEFAULT_SETTINGS.shapeRotation);
+    setRotationSpeed(DEFAULT_SETTINGS.rotationSpeed);
+    setBurstEnabled(DEFAULT_SETTINGS.burstEnabled);
+    setBurstInterval(DEFAULT_SETTINGS.burstInterval);
+    setBurstMagnitude(DEFAULT_SETTINGS.burstMagnitude);
+    setBurstDecay(DEFAULT_SETTINGS.burstDecay);
+    setHueOscEnabled(DEFAULT_SETTINGS.hueOscEnabled);
+    setHueOscFunction(DEFAULT_SETTINGS.hueOscFunction);
+    setHueOscSpeed(DEFAULT_SETTINGS.hueOscSpeed);
+    setHueOscMin(DEFAULT_SETTINGS.hueOscMin);
+    setHueOscMax(DEFAULT_SETTINGS.hueOscMax);
+    setRadiusOscEnabled(DEFAULT_SETTINGS.radiusOscEnabled);
+    setRadiusOscFunction(DEFAULT_SETTINGS.radiusOscFunction);
+    setRadiusOscSpeed(DEFAULT_SETTINGS.radiusOscSpeed);
+    setRadiusOscMin(DEFAULT_SETTINGS.radiusOscMin);
+    setRadiusOscMax(DEFAULT_SETTINGS.radiusOscMax);
+    setSpacingOscEnabled(DEFAULT_SETTINGS.spacingOscEnabled);
+    setSpacingOscFunction(DEFAULT_SETTINGS.spacingOscFunction);
+    setSpacingOscSpeed(DEFAULT_SETTINGS.spacingOscSpeed);
+    setSpacingOscMin(DEFAULT_SETTINGS.spacingOscMin);
+    setSpacingOscMax(DEFAULT_SETTINGS.spacingOscMax);
+    setSegmentsOscEnabled(DEFAULT_SETTINGS.segmentsOscEnabled);
+    setSegmentsOscFunction(DEFAULT_SETTINGS.segmentsOscFunction);
+    setSegmentsOscSpeed(DEFAULT_SETTINGS.segmentsOscSpeed);
+    setSegmentsOscMin(DEFAULT_SETTINGS.segmentsOscMin);
+    setSegmentsOscMax(DEFAULT_SETTINGS.segmentsOscMax);
+    setCameraRotationOscEnabled(DEFAULT_SETTINGS.cameraRotationOscEnabled);
+    setCameraRotationOscFunction(DEFAULT_SETTINGS.cameraRotationOscFunction);
+    setCameraRotationOscSpeed(DEFAULT_SETTINGS.cameraRotationOscSpeed);
+    setCameraRotationOscMin(DEFAULT_SETTINGS.cameraRotationOscMin);
+    setCameraRotationOscMax(DEFAULT_SETTINGS.cameraRotationOscMax);
+    setRotationSpeedOscEnabled(DEFAULT_SETTINGS.rotationSpeedOscEnabled);
+    setRotationSpeedOscFunction(DEFAULT_SETTINGS.rotationSpeedOscFunction);
+    setRotationSpeedOscSpeed(DEFAULT_SETTINGS.rotationSpeedOscSpeed);
+    setRotationSpeedOscMin(DEFAULT_SETTINGS.rotationSpeedOscMin);
+    setRotationSpeedOscMax(DEFAULT_SETTINGS.rotationSpeedOscMax);
+    setShapeRotationOscEnabled(DEFAULT_SETTINGS.shapeRotationOscEnabled);
+    setShapeRotationOscFunction(DEFAULT_SETTINGS.shapeRotationOscFunction);
+    setShapeRotationOscSpeed(DEFAULT_SETTINGS.shapeRotationOscSpeed);
+    setShapeRotationOscMin(DEFAULT_SETTINGS.shapeRotationOscMin);
+    setShapeRotationOscMax(DEFAULT_SETTINGS.shapeRotationOscMax);
+    setTubeThicknessOscEnabled(DEFAULT_SETTINGS.tubeThicknessOscEnabled);
+    setTubeThicknessOscFunction(DEFAULT_SETTINGS.tubeThicknessOscFunction);
+    setTubeThicknessOscSpeed(DEFAULT_SETTINGS.tubeThicknessOscSpeed);
+    setTubeThicknessOscMin(DEFAULT_SETTINGS.tubeThicknessOscMin);
+    setTubeThicknessOscMax(DEFAULT_SETTINGS.tubeThicknessOscMax);
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -745,9 +1010,30 @@ export default function Tunnel3D() {
         >
           <div style={{ marginBottom: "20px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
             <a href="/" style={{ fontSize: "12px", color: "#66ccff", textDecoration: "none" }}>← Gallery</a>
-            <h2 style={{ margin: "8px 0 0 0", fontSize: "18px", color: "#fff" }}>
-              3D Tunnel
-            </h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+              <h2 style={{ margin: "0", fontSize: "18px", color: "#fff" }}>
+                3D Tunnel
+              </h2>
+              <button
+                onClick={resetAllSettings}
+                style={{
+                  background: "#444",
+                  color: "#fff",
+                  border: "1px solid #666",
+                  padding: "4px 10px",
+                  borderRadius: "4px",
+                  fontSize: "10px",
+                  cursor: "pointer",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = "#555"}
+                onMouseOut={(e) => e.currentTarget.style.background = "#444"}
+                title="Reset all settings to defaults"
+              >
+                Reset All
+              </button>
+            </div>
           </div>
 
           <div style={{ marginBottom: "20px" }}>
@@ -1084,9 +1370,30 @@ export default function Tunnel3D() {
 
           {/* Oscillators Section */}
           <div style={{ marginTop: "30px", paddingTop: "20px", borderTop: "1px solid #444" }}>
-            <h3 style={{ margin: "0 0 15px 0", fontSize: "14px", color: "#66ccff", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Oscillators
-            </h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+              <h3 style={{ margin: "0", fontSize: "14px", color: "#66ccff", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Oscillators
+              </h3>
+              <button
+                onClick={clearAllOscillators}
+                style={{
+                  background: "#ff4444",
+                  color: "#fff",
+                  border: "none",
+                  padding: "6px 12px",
+                  borderRadius: "4px",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = "#ff6666"}
+                onMouseOut={(e) => e.currentTarget.style.background = "#ff4444"}
+              >
+                Clear All
+              </button>
+            </div>
 
             {/* Hue Oscillator */}
             <details style={{ marginBottom: "15px" }}>
