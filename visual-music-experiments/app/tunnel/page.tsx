@@ -22,7 +22,9 @@ export default function Tunnel3D() {
   const [generationRadius, setGenerationRadius] = useState(5);
   const [generationSpacing, setGenerationSpacing] = useState(2);
   const [generationSegments, setGenerationSegments] = useState(3);
+  const [tubeThickness, setTubeThickness] = useState(0.2);
   const [shapeRotation, setShapeRotation] = useState(0);
+  const [rotationSpeed, setRotationSpeed] = useState(0);
 
   // Oscillators for generation constants
   const [hueOscEnabled, setHueOscEnabled] = useState(false);
@@ -55,11 +57,29 @@ export default function Tunnel3D() {
   const [cameraRotationOscMin, setCameraRotationOscMin] = useState(0);
   const [cameraRotationOscMax, setCameraRotationOscMax] = useState(Math.PI * 2);
 
+  const [rotationSpeedOscEnabled, setRotationSpeedOscEnabled] = useState(false);
+  const [rotationSpeedOscFunction, setRotationSpeedOscFunction] = useState<WaveFunction>("sin");
+  const [rotationSpeedOscSpeed, setRotationSpeedOscSpeed] = useState(1);
+  const [rotationSpeedOscMin, setRotationSpeedOscMin] = useState(-10);
+  const [rotationSpeedOscMax, setRotationSpeedOscMax] = useState(10);
+
   const [shapeRotationOscEnabled, setShapeRotationOscEnabled] = useState(false);
   const [shapeRotationOscFunction, setShapeRotationOscFunction] = useState<WaveFunction>("sin");
   const [shapeRotationOscSpeed, setShapeRotationOscSpeed] = useState(1);
   const [shapeRotationOscMin, setShapeRotationOscMin] = useState(0);
   const [shapeRotationOscMax, setShapeRotationOscMax] = useState(Math.PI * 2);
+
+  const [tubeThicknessOscEnabled, setTubeThicknessOscEnabled] = useState(false);
+  const [tubeThicknessOscFunction, setTubeThicknessOscFunction] = useState<WaveFunction>("sin");
+  const [tubeThicknessOscSpeed, setTubeThicknessOscSpeed] = useState(1);
+  const [tubeThicknessOscMin, setTubeThicknessOscMin] = useState(0.05);
+  const [tubeThicknessOscMax, setTubeThicknessOscMax] = useState(1);
+
+  // Burst parameters
+  const [burstEnabled, setBurstEnabled] = useState(false);
+  const [burstInterval, setBurstInterval] = useState(2); // seconds between bursts
+  const [burstMagnitude, setBurstMagnitude] = useState(1.5); // scale multiplier
+  const [burstDecay, setBurstDecay] = useState(20); // decay rate (higher = faster decay)
 
   const [showControls, setShowControls] = useState(true);
   const [isPreview, setIsPreview] = useState(false);
@@ -94,7 +114,9 @@ export default function Tunnel3D() {
   const generationRadiusRef = useRef(generationRadius);
   const generationSpacingRef = useRef(generationSpacing);
   const generationSegmentsRef = useRef(generationSegments);
+  const tubeThicknessRef = useRef(tubeThickness);
   const shapeRotationRef = useRef(shapeRotation);
+  const rotationSpeedRef = useRef(rotationSpeed);
 
   // Oscillator refs
   const hueOscEnabledRef = useRef(hueOscEnabled);
@@ -127,15 +149,39 @@ export default function Tunnel3D() {
   const cameraRotationOscMinRef = useRef(cameraRotationOscMin);
   const cameraRotationOscMaxRef = useRef(cameraRotationOscMax);
 
+  const rotationSpeedOscEnabledRef = useRef(rotationSpeedOscEnabled);
+  const rotationSpeedOscFunctionRef = useRef(rotationSpeedOscFunction);
+  const rotationSpeedOscSpeedRef = useRef(rotationSpeedOscSpeed);
+  const rotationSpeedOscMinRef = useRef(rotationSpeedOscMin);
+  const rotationSpeedOscMaxRef = useRef(rotationSpeedOscMax);
+
   const shapeRotationOscEnabledRef = useRef(shapeRotationOscEnabled);
   const shapeRotationOscFunctionRef = useRef(shapeRotationOscFunction);
   const shapeRotationOscSpeedRef = useRef(shapeRotationOscSpeed);
   const shapeRotationOscMinRef = useRef(shapeRotationOscMin);
   const shapeRotationOscMaxRef = useRef(shapeRotationOscMax);
 
+  const tubeThicknessOscEnabledRef = useRef(tubeThicknessOscEnabled);
+  const tubeThicknessOscFunctionRef = useRef(tubeThicknessOscFunction);
+  const tubeThicknessOscSpeedRef = useRef(tubeThicknessOscSpeed);
+  const tubeThicknessOscMinRef = useRef(tubeThicknessOscMin);
+  const tubeThicknessOscMaxRef = useRef(tubeThicknessOscMax);
+
+  const burstEnabledRef = useRef(burstEnabled);
+  const burstIntervalRef = useRef(burstInterval);
+  const burstMagnitudeRef = useRef(burstMagnitude);
+  const burstDecayRef = useRef(burstDecay);
+
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
+
+  useEffect(() => {
+    burstEnabledRef.current = burstEnabled;
+    burstIntervalRef.current = burstInterval;
+    burstMagnitudeRef.current = burstMagnitude;
+    burstDecayRef.current = burstDecay;
+  }, [burstEnabled, burstInterval, burstMagnitude, burstDecay]);
 
   useEffect(() => {
     cameraRotationRef.current = cameraRotation;
@@ -144,6 +190,10 @@ export default function Tunnel3D() {
   useEffect(() => {
     shapeRotationRef.current = shapeRotation;
   }, [shapeRotation]);
+
+  useEffect(() => {
+    rotationSpeedRef.current = rotationSpeed;
+  }, [rotationSpeed]);
 
   useEffect(() => {
     generationHueRef.current = generationHue;
@@ -160,6 +210,10 @@ export default function Tunnel3D() {
   useEffect(() => {
     generationSegmentsRef.current = generationSegments;
   }, [generationSegments]);
+
+  useEffect(() => {
+    tubeThicknessRef.current = tubeThickness;
+  }, [tubeThickness]);
 
   useEffect(() => {
     hueOscEnabledRef.current = hueOscEnabled;
@@ -202,12 +256,28 @@ export default function Tunnel3D() {
   }, [cameraRotationOscEnabled, cameraRotationOscFunction, cameraRotationOscSpeed, cameraRotationOscMin, cameraRotationOscMax]);
 
   useEffect(() => {
+    rotationSpeedOscEnabledRef.current = rotationSpeedOscEnabled;
+    rotationSpeedOscFunctionRef.current = rotationSpeedOscFunction;
+    rotationSpeedOscSpeedRef.current = rotationSpeedOscSpeed;
+    rotationSpeedOscMinRef.current = rotationSpeedOscMin;
+    rotationSpeedOscMaxRef.current = rotationSpeedOscMax;
+  }, [rotationSpeedOscEnabled, rotationSpeedOscFunction, rotationSpeedOscSpeed, rotationSpeedOscMin, rotationSpeedOscMax]);
+
+  useEffect(() => {
     shapeRotationOscEnabledRef.current = shapeRotationOscEnabled;
     shapeRotationOscFunctionRef.current = shapeRotationOscFunction;
     shapeRotationOscSpeedRef.current = shapeRotationOscSpeed;
     shapeRotationOscMinRef.current = shapeRotationOscMin;
     shapeRotationOscMaxRef.current = shapeRotationOscMax;
   }, [shapeRotationOscEnabled, shapeRotationOscFunction, shapeRotationOscSpeed, shapeRotationOscMin, shapeRotationOscMax]);
+
+  useEffect(() => {
+    tubeThicknessOscEnabledRef.current = tubeThicknessOscEnabled;
+    tubeThicknessOscFunctionRef.current = tubeThicknessOscFunction;
+    tubeThicknessOscSpeedRef.current = tubeThicknessOscSpeed;
+    tubeThicknessOscMinRef.current = tubeThicknessOscMin;
+    tubeThicknessOscMaxRef.current = tubeThicknessOscMax;
+  }, [tubeThicknessOscEnabled, tubeThicknessOscFunction, tubeThicknessOscSpeed, tubeThicknessOscMin, tubeThicknessOscMax]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -234,7 +304,7 @@ export default function Tunnel3D() {
     for (let i = 0; i < numRings; i++) {
       const geometry = new THREE.TorusGeometry(
         generationRadiusRef.current,
-        0.2,
+        tubeThicknessRef.current,
         16,
         generationSegmentsRef.current
       );
@@ -246,7 +316,7 @@ export default function Tunnel3D() {
       });
       const ring = new THREE.Mesh(geometry, material);
       ring.position.z = -i * generationSpacingRef.current;
-      ring.rotation.z = shapeRotationRef.current;
+      ring.rotation.z = shapeRotationRef.current + rotationSpeedRef.current;
 
       // Bake ring properties from generation constants
       ring.userData = {
@@ -255,6 +325,7 @@ export default function Tunnel3D() {
         hue: hue,
         spacing: generationSpacingRef.current,
         shapeRotation: shapeRotationRef.current,
+        tubeThickness: tubeThicknessRef.current,
         birthIndex: i,
       };
 
@@ -264,6 +335,7 @@ export default function Tunnel3D() {
 
     let time = 0;
     let frameCount = 0;
+    let lastBurstTime = 0;
 
     // Helper function to calculate oscillated value
     const getOscillatedValue = (
@@ -295,10 +367,76 @@ export default function Tunnel3D() {
         );
         camera.rotation.z = currentCameraRotation;
 
+        // Calculate burst effect (ADSR-like envelope)
+        let burstScale = 1;
+        if (burstEnabledRef.current) {
+          const timeSinceLastBurst = time - lastBurstTime;
+
+          // Trigger new burst if interval has passed
+          if (timeSinceLastBurst >= burstIntervalRef.current) {
+            lastBurstTime = time;
+          }
+
+          // Fast attack + exponential decay
+          const attackTime = 0.02; // Very short attack (20ms)
+          let envelope;
+
+          if (timeSinceLastBurst < attackTime) {
+            // Quick linear attack
+            envelope = timeSinceLastBurst / attackTime;
+          } else {
+            // Exponential decay after attack
+            const decayTime = timeSinceLastBurst - attackTime;
+            envelope = Math.exp(-burstDecayRef.current * decayTime);
+          }
+
+          burstScale = 1 + (burstMagnitudeRef.current - 1) * envelope;
+        }
+
         // Move all rings forward toward camera first
         rings.forEach((ring) => {
           ring.position.z += 0.1 * speedRef.current;
         });
+
+        // Apply burst by regenerating geometry with scaled major radius
+        if (burstEnabledRef.current) {
+          rings.forEach((ring) => {
+            const originalRadius = ring.userData.radius;
+            const segments = ring.userData.segments;
+            const tubeThickness = ring.userData.tubeThickness;
+            const burstRadius = originalRadius * burstScale;
+
+            // Only regenerate if burst scale changed significantly (optimization)
+            const currentRadius = (ring.geometry as THREE.TorusGeometry).parameters.radius;
+            if (Math.abs(currentRadius - burstRadius) > 0.01) {
+              ring.geometry.dispose();
+              ring.geometry = new THREE.TorusGeometry(
+                burstRadius,    // Scaled major radius
+                tubeThickness,  // Constant tube thickness
+                16,
+                segments
+              );
+            }
+          });
+        } else {
+          // Reset to original radius when burst is disabled
+          rings.forEach((ring) => {
+            const originalRadius = ring.userData.radius;
+            const segments = ring.userData.segments;
+            const tubeThickness = ring.userData.tubeThickness;
+            const currentRadius = (ring.geometry as THREE.TorusGeometry).parameters.radius;
+
+            if (Math.abs(currentRadius - originalRadius) > 0.01) {
+              ring.geometry.dispose();
+              ring.geometry = new THREE.TorusGeometry(
+                originalRadius, // Original radius
+                tubeThickness,  // Constant tube thickness
+                16,
+                segments
+              );
+            }
+          });
+        }
 
         // Then reset rings that passed the camera (after all movement is complete)
         rings.forEach((ring, i) => {
@@ -349,6 +487,24 @@ export default function Tunnel3D() {
               shapeRotationOscMaxRef.current
             );
 
+            const currentTubeThickness = getOscillatedValue(
+              tubeThicknessRef.current,
+              tubeThicknessOscEnabledRef.current,
+              tubeThicknessOscFunctionRef.current,
+              tubeThicknessOscSpeedRef.current,
+              tubeThicknessOscMinRef.current,
+              tubeThicknessOscMaxRef.current
+            );
+
+            const currentRotationSpeed = getOscillatedValue(
+              rotationSpeedRef.current,
+              rotationSpeedOscEnabledRef.current,
+              rotationSpeedOscFunctionRef.current,
+              rotationSpeedOscSpeedRef.current,
+              rotationSpeedOscMinRef.current,
+              rotationSpeedOscMaxRef.current
+            );
+
             // Find the furthest back ring (after all movement is done)
             const minZ = Math.min(...rings.map(r => r.position.z));
             // Place this ring using oscillated spacing
@@ -358,13 +514,13 @@ export default function Tunnel3D() {
             ring.geometry.dispose();
             ring.geometry = new THREE.TorusGeometry(
               currentRadius,
-              0.2,
+              currentTubeThickness,
               16,
               currentSegments
             );
 
-            // Apply shape rotation
-            ring.rotation.z = currentShapeRotation;
+            // Apply shape rotation (base rotation + rotation speed offset)
+            ring.rotation.z = currentShapeRotation + currentRotationSpeed;
 
             // Bake oscillated generation constants into ring
             ring.userData = {
@@ -373,6 +529,7 @@ export default function Tunnel3D() {
               hue: currentHue,
               spacing: currentSpacing,
               shapeRotation: currentShapeRotation,
+              tubeThickness: currentTubeThickness,
               birthIndex: ring.userData.birthIndex,
             };
 
@@ -637,6 +794,116 @@ export default function Tunnel3D() {
             />
           </div>
 
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              htmlFor="tubeThickness"
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                color: "#fff",
+              }}
+            >
+              Tube Thickness: {tubeThickness.toFixed(2)}
+            </label>
+            <input
+              id="tubeThickness"
+              type="range"
+              min="0.05"
+              max="1"
+              step="0.01"
+              value={tubeThickness}
+              onChange={(e) => setTubeThickness(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              htmlFor="rotationSpeed"
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                color: "#fff",
+              }}
+            >
+              Shape Rotation Speed: {rotationSpeed.toFixed(2)}
+            </label>
+            <input
+              id="rotationSpeed"
+              type="range"
+              min="-10"
+              max="10"
+              step="0.01"
+              value={rotationSpeed}
+              onChange={(e) => setRotationSpeed(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          {/* Burst Section */}
+          <div style={{ marginTop: "30px", paddingTop: "20px", borderTop: "1px solid #444" }}>
+            <h3 style={{ margin: "0 0 15px 0", fontSize: "14px", color: "#ff6644", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Burst {burstEnabled ? "✓" : ""}
+            </h3>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontSize: "13px" }}>
+                <input type="checkbox" checked={burstEnabled} onChange={(e) => setBurstEnabled(e.target.checked)} />
+                {" "}Enable Burst
+              </label>
+            </div>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontSize: "13px", color: "#ccc" }}>
+                Interval: {burstInterval.toFixed(1)}s
+              </label>
+              <input
+                type="range"
+                min="0.1"
+                max="10"
+                step="0.1"
+                value={burstInterval}
+                onChange={(e) => setBurstInterval(Number(e.target.value))}
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontSize: "13px", color: "#ccc" }}>
+                Magnitude: {burstMagnitude.toFixed(2)}x
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.1"
+                value={burstMagnitude}
+                onChange={(e) => setBurstMagnitude(Number(e.target.value))}
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontSize: "13px", color: "#ccc" }}>
+                Decay Speed: {burstDecay.toFixed(1)}
+              </label>
+              <input
+                type="range"
+                min="5"
+                max="50"
+                step="1"
+                value={burstDecay}
+                onChange={(e) => setBurstDecay(Number(e.target.value))}
+                style={{ width: "100%" }}
+              />
+              <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+                Higher = snappier burst
+              </div>
+            </div>
+          </div>
+
           {/* Oscillators Section */}
           <div style={{ marginTop: "30px", paddingTop: "20px", borderTop: "1px solid #444" }}>
             <h3 style={{ margin: "0 0 15px 0", fontSize: "14px", color: "#66ccff", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -813,6 +1080,40 @@ export default function Tunnel3D() {
               </div>
             </details>
 
+            {/* Shape Rotation Speed Oscillator */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Shape Rotation Speed Oscillator {rotationSpeedOscEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={rotationSpeedOscEnabled} onChange={(e) => setRotationSpeedOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={rotationSpeedOscFunction} onChange={(e) => setRotationSpeedOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
+                    <option value="sin">Sin</option>
+                    <option value="cos">Cos</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {rotationSpeedOscSpeed.toFixed(2)}
+                  <input type="range" min="0.1" max="5" step="0.1" value={rotationSpeedOscSpeed} onChange={(e) => setRotationSpeedOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {rotationSpeedOscMin.toFixed(2)}
+                  <input type="range" min="-50" max="50" step="0.1" value={rotationSpeedOscMin} onChange={(e) => setRotationSpeedOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {rotationSpeedOscMax.toFixed(2)}
+                  <input type="range" min="-50" max="50" step="0.1" value={rotationSpeedOscMax} onChange={(e) => setRotationSpeedOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
             {/* Shape Rotation Oscillator */}
             <details style={{ marginBottom: "15px" }}>
               <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
@@ -843,6 +1144,40 @@ export default function Tunnel3D() {
                 <label style={{ display: "block", fontSize: "12px" }}>
                   Max: {(shapeRotationOscMax * 180 / Math.PI).toFixed(0)}°
                   <input type="range" min="0" max={Math.PI * 2} step="0.01" value={shapeRotationOscMax} onChange={(e) => setShapeRotationOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Tube Thickness Oscillator */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Tube Thickness Oscillator {tubeThicknessOscEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={tubeThicknessOscEnabled} onChange={(e) => setTubeThicknessOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={tubeThicknessOscFunction} onChange={(e) => setTubeThicknessOscFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px" }}>
+                    <option value="sin">Sin</option>
+                    <option value="cos">Cos</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {tubeThicknessOscSpeed.toFixed(2)}
+                  <input type="range" min="0.1" max="5" step="0.1" value={tubeThicknessOscSpeed} onChange={(e) => setTubeThicknessOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {tubeThicknessOscMin.toFixed(2)}
+                  <input type="range" min="0.05" max="1" step="0.01" value={tubeThicknessOscMin} onChange={(e) => setTubeThicknessOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {tubeThicknessOscMax.toFixed(2)}
+                  <input type="range" min="0.05" max="1" step="0.01" value={tubeThicknessOscMax} onChange={(e) => setTubeThicknessOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
               </div>
             </details>
