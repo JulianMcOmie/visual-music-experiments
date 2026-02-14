@@ -293,6 +293,7 @@ export default function Tunnel3D() {
     shapeRotation: 0,
     rotationSpeed: 0,
     generationRotation: 0,
+    actualRotation: 0,
   });
   // State for display only, updated on interval
   const [debugInfo, setDebugInfo] = useState({
@@ -304,6 +305,7 @@ export default function Tunnel3D() {
     shapeRotation: 0,
     rotationSpeed: 0,
     generationRotation: 0,
+    actualRotation: 0,
   });
 
   // Load settings from localStorage after mount (client-side only)
@@ -895,6 +897,7 @@ export default function Tunnel3D() {
       });
       const ring = new THREE.Mesh(geometry, material);
       ring.position.z = -i * generationSpacingRef.current;
+      // Initial rotation uses base values (will be updated in animation loop with oscillated values)
       ring.rotation.z = shapeRotationRef.current + rotationSpeedRef.current;
 
       // Apply color with pattern consideration (will be set after userData is defined)
@@ -984,10 +987,14 @@ export default function Tunnel3D() {
           rotationSpeedOscMaxRef.current
         );
 
+        // Calculate actual rotation (source of truth for visual rotation)
+        const actualRotation = currentShapeRotationDebug + currentRotationSpeedDebug;
+
         // Update debug info for rotation values every frame
         debugInfoRef.current.shapeRotation = currentShapeRotationDebug;
         debugInfoRef.current.rotationSpeed = currentRotationSpeedDebug;
         debugInfoRef.current.generationRotation = shapeRotationRef.current;
+        debugInfoRef.current.actualRotation = actualRotation;
         debugInfoRef.current.time = time;
         debugInfoRef.current.fps = Math.round(fps);
 
@@ -1183,8 +1190,9 @@ export default function Tunnel3D() {
               regenThisFrame++;
             }
 
-            // Apply shape rotation (base rotation + rotation speed offset)
-            ring.rotation.z = currentShapeRotation + currentRotationSpeed;
+            // Apply actual rotation (source of truth - combines shape rotation + rotation speed)
+            const currentActualRotation = currentShapeRotation + currentRotationSpeed;
+            ring.rotation.z = currentActualRotation;
 
             // Bake oscillated generation constants into ring
             ring.userData = {
@@ -1303,11 +1311,14 @@ export default function Tunnel3D() {
               <div>Time: {debugInfo.time.toFixed(2)}</div>
               <div>Ring Z: {debugInfo.ringZ.toFixed(2)}</div>
               <div>Hue: {debugInfo.hue.toFixed(0)}°</div>
-              <div style={{ borderTop: "1px solid rgba(102, 204, 255, 0.2)", marginTop: "8px", paddingTop: "8px" }}>
+              <div style={{ borderTop: "1px solid rgba(102, 204, 255, 0.2)", marginTop: "8px", paddingTop: "8px", fontWeight: "bold", color: "#ffdd66" }}>
+                Actual Rot: {(debugInfo.actualRotation * 180 / Math.PI).toFixed(1)}°
+              </div>
+              <div style={{ fontSize: "11px", opacity: "0.7", marginTop: "4px" }}>
                 Shape Rot: {(debugInfo.shapeRotation * 180 / Math.PI).toFixed(1)}°
               </div>
-              <div>Rot Speed: {debugInfo.rotationSpeed.toFixed(2)}</div>
-              <div>Gen Rot: {(debugInfo.generationRotation * 180 / Math.PI).toFixed(1)}°</div>
+              <div style={{ fontSize: "11px", opacity: "0.7" }}>Rot Speed: {debugInfo.rotationSpeed.toFixed(2)}</div>
+              <div style={{ fontSize: "11px", opacity: "0.7" }}>Gen Rot: {(debugInfo.generationRotation * 180 / Math.PI).toFixed(1)}°</div>
             </div>
           )}
         </>
