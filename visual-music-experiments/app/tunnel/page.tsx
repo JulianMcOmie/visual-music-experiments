@@ -963,6 +963,25 @@ export default function Tunnel3D() {
         );
         camera.rotation.z = currentCameraRotation;
 
+        // Calculate current shape rotation and rotation speed for debug display
+        const currentShapeRotationDebug = getOscillatedValue(
+          shapeRotationRef.current,
+          shapeRotationOscEnabledRef.current,
+          shapeRotationOscFunctionRef.current,
+          shapeRotationOscSpeedRef.current,
+          shapeRotationOscMinRef.current,
+          shapeRotationOscMaxRef.current
+        );
+
+        const currentRotationSpeedDebug = getOscillatedValue(
+          rotationSpeedRef.current,
+          rotationSpeedOscEnabledRef.current,
+          rotationSpeedOscFunctionRef.current,
+          rotationSpeedOscSpeedRef.current,
+          rotationSpeedOscMinRef.current,
+          rotationSpeedOscMaxRef.current
+        );
+
         // Calculate burst effect (ADSR-like envelope)
         let burstScale = 1;
         if (burstEnabledRef.current) {
@@ -1183,8 +1202,8 @@ export default function Tunnel3D() {
               hue: ring.userData.hue,
               fps: Math.round(fps),
               regenCount: regenThisFrame,
-              shapeRotation: ring.rotation.z,
-              rotationSpeed: rotationSpeedRef.current,
+              shapeRotation: currentShapeRotationDebug,
+              rotationSpeed: currentRotationSpeedDebug,
             };
           }
         });
