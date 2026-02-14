@@ -984,6 +984,13 @@ export default function Tunnel3D() {
           rotationSpeedOscMaxRef.current
         );
 
+        // Update debug info for rotation values every frame
+        debugInfoRef.current.shapeRotation = currentShapeRotationDebug;
+        debugInfoRef.current.rotationSpeed = currentRotationSpeedDebug;
+        debugInfoRef.current.generationRotation = shapeRotationRef.current;
+        debugInfoRef.current.time = time;
+        debugInfoRef.current.fps = Math.round(fps);
+
         // Calculate burst effect (ADSR-like envelope)
         let burstScale = 1;
         if (burstEnabledRef.current) {
@@ -1196,18 +1203,11 @@ export default function Tunnel3D() {
             applyColorPattern(ring.material as THREE.MeshBasicMaterial, ring.userData.birthIndex, currentHue, currentSaturation, currentBrightness);
           }
 
-          // Update debug ref (no re-render, state updated separately on interval)
+          // Update ring-specific debug values (rotation values updated above every frame)
           if (i === 0) {
-            debugInfoRef.current = {
-              time,
-              ringZ: ring.position.z,
-              hue: ring.userData.hue,
-              fps: Math.round(fps),
-              regenCount: regenThisFrame,
-              shapeRotation: currentShapeRotationDebug,
-              rotationSpeed: currentRotationSpeedDebug,
-              generationRotation: shapeRotationRef.current,
-            };
+            debugInfoRef.current.ringZ = ring.position.z;
+            debugInfoRef.current.hue = ring.userData.hue;
+            debugInfoRef.current.regenCount = regenThisFrame;
           }
         });
 
