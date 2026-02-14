@@ -292,6 +292,7 @@ export default function Tunnel3D() {
     regenCount: 0,
     shapeRotation: 0,
     rotationSpeed: 0,
+    generationRotation: 0,
   });
   // State for display only, updated on interval
   const [debugInfo, setDebugInfo] = useState({
@@ -302,6 +303,7 @@ export default function Tunnel3D() {
     regenCount: 0,
     shapeRotation: 0,
     rotationSpeed: 0,
+    generationRotation: 0,
   });
 
   // Load settings from localStorage after mount (client-side only)
@@ -1204,6 +1206,7 @@ export default function Tunnel3D() {
               regenCount: regenThisFrame,
               shapeRotation: currentShapeRotationDebug,
               rotationSpeed: currentRotationSpeedDebug,
+              generationRotation: shapeRotationRef.current,
             };
           }
         });
@@ -1304,6 +1307,7 @@ export default function Tunnel3D() {
                 Shape Rot: {(debugInfo.shapeRotation * 180 / Math.PI).toFixed(1)}°
               </div>
               <div>Rot Speed: {debugInfo.rotationSpeed.toFixed(2)}</div>
+              <div>Gen Rot: {(debugInfo.generationRotation * 180 / Math.PI).toFixed(1)}°</div>
             </div>
           )}
         </>
