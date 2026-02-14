@@ -278,6 +278,7 @@ export default function Tunnel3D() {
   const [burstDecay, setBurstDecay] = useState(DEFAULT_SETTINGS.burstDecay);
 
   const [showControls, setShowControls] = useState(true);
+  const [showDebug, setShowDebug] = useState(true);
   const [isPreview, setIsPreview] = useState(false);
   const pausedRef = useRef(false);
   const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
@@ -289,6 +290,8 @@ export default function Tunnel3D() {
     hue: 0,
     fps: 0,
     regenCount: 0,
+    shapeRotation: 0,
+    rotationSpeed: 0,
   });
   // State for display only, updated on interval
   const [debugInfo, setDebugInfo] = useState({
@@ -297,6 +300,8 @@ export default function Tunnel3D() {
     hue: 0,
     fps: 0,
     regenCount: 0,
+    shapeRotation: 0,
+    rotationSpeed: 0,
   });
 
   // Load settings from localStorage after mount (client-side only)
@@ -1178,6 +1183,8 @@ export default function Tunnel3D() {
               hue: ring.userData.hue,
               fps: Math.round(fps),
               regenCount: regenThisFrame,
+              shapeRotation: ring.rotation.z,
+              rotationSpeed: rotationSpeedRef.current,
             };
           }
         });
@@ -1225,32 +1232,62 @@ export default function Tunnel3D() {
 
       {/* Debug display - top right */}
       {!isPreview && (
-        <div
-          style={{
-            position: "absolute",
-            top: "20px",
-            right: "20px",
-            minWidth: "180px",
-            background: "rgba(0, 0, 0, 0.7)",
-            color: "#66ccff",
-            padding: "12px 16px",
-            borderRadius: "8px",
-            fontFamily: "monospace",
-            fontSize: "12px",
-            lineHeight: "1.6",
-            border: "1px solid rgba(102, 204, 255, 0.3)",
-          }}
-        >
-          <div style={{ color: debugInfo.fps < 30 ? "#ff4444" : debugInfo.fps < 50 ? "#ffaa44" : "#66ccff" }}>
-            FPS: {debugInfo.fps}
-          </div>
-          <div style={{ color: debugInfo.regenCount > 5 ? "#ff4444" : debugInfo.regenCount > 2 ? "#ffaa44" : "#66ccff" }}>
-            Regen/frame: {debugInfo.regenCount}
-          </div>
-          <div>Time: {debugInfo.time.toFixed(2)}</div>
-          <div>Ring Z: {debugInfo.ringZ.toFixed(2)}</div>
-          <div>Hue: {debugInfo.hue.toFixed(0)}°</div>
-        </div>
+        <>
+          {/* Toggle Debug Button */}
+          <button
+            onClick={() => setShowDebug(!showDebug)}
+            style={{
+              position: "absolute",
+              top: "10px",
+              right: "10px",
+              zIndex: 1000,
+              background: "rgba(0, 0, 0, 0.8)",
+              color: "#66ccff",
+              border: "1px solid rgba(102, 204, 255, 0.3)",
+              borderRadius: "4px",
+              padding: "6px 10px",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontFamily: "monospace",
+            }}
+            title={showDebug ? "Hide Debug Info" : "Show Debug Info"}
+          >
+            {showDebug ? "▼" : "▶"} Debug
+          </button>
+
+          {showDebug && (
+            <div
+              style={{
+                position: "absolute",
+                top: "50px",
+                right: "20px",
+                minWidth: "200px",
+                background: "rgba(0, 0, 0, 0.7)",
+                color: "#66ccff",
+                padding: "12px 16px",
+                borderRadius: "8px",
+                fontFamily: "monospace",
+                fontSize: "12px",
+                lineHeight: "1.6",
+                border: "1px solid rgba(102, 204, 255, 0.3)",
+              }}
+            >
+              <div style={{ color: debugInfo.fps < 30 ? "#ff4444" : debugInfo.fps < 50 ? "#ffaa44" : "#66ccff" }}>
+                FPS: {debugInfo.fps}
+              </div>
+              <div style={{ color: debugInfo.regenCount > 5 ? "#ff4444" : debugInfo.regenCount > 2 ? "#ffaa44" : "#66ccff" }}>
+                Regen/frame: {debugInfo.regenCount}
+              </div>
+              <div>Time: {debugInfo.time.toFixed(2)}</div>
+              <div>Ring Z: {debugInfo.ringZ.toFixed(2)}</div>
+              <div>Hue: {debugInfo.hue.toFixed(0)}°</div>
+              <div style={{ borderTop: "1px solid rgba(102, 204, 255, 0.2)", marginTop: "8px", paddingTop: "8px" }}>
+                Shape Rot: {(debugInfo.shapeRotation * 180 / Math.PI).toFixed(1)}°
+              </div>
+              <div>Rot Speed: {debugInfo.rotationSpeed.toFixed(2)}</div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Toggle Controls Button - Always Visible */}
