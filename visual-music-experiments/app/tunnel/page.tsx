@@ -1253,6 +1253,29 @@ export default function Tunnel3D() {
         </div>
       )}
 
+      {/* Toggle Controls Button - Always Visible */}
+      <button
+        onClick={() => setShowControls(!showControls)}
+        style={{
+          position: "absolute",
+          top: "10px",
+          left: showControls ? "290px" : "10px",
+          zIndex: 1000,
+          background: "rgba(0, 0, 0, 0.8)",
+          color: "#fff",
+          border: "1px solid #444",
+          borderRadius: "4px",
+          padding: "8px 12px",
+          cursor: "pointer",
+          fontSize: "14px",
+          fontFamily: "monospace",
+          transition: "left 0.3s ease",
+        }}
+        title={showControls ? "Hide Controls (for recording)" : "Show Controls"}
+      >
+        {showControls ? "◀ Hide" : "▶ Show"}
+      </button>
+
       {showControls && (
         <div
           style={{
