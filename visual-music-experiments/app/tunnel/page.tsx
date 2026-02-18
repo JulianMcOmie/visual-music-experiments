@@ -188,6 +188,19 @@ const DEFAULT_SETTINGS = {
   brightnessOscSpeed: 1,
   brightnessOscMin: 0,
   brightnessOscMax: 1,
+  // Morph oscillators - apply to existing rings per-frame
+  morphColorEnabled: false,
+  morphColorFunction: "sin" as WaveFunction,
+  morphColorSpeed: 1,
+  morphColorMin: 0,
+  morphColorMax: 360,
+  morphColorDelay: 0,
+  morphRotationEnabled: false,
+  morphRotationFunction: "sin" as WaveFunction,
+  morphRotationSpeed: 1,
+  morphRotationMin: -5,
+  morphRotationMax: 5,
+  morphRotationDelay: 0,
 };
 
 export default function Tunnel3D() {
@@ -276,6 +289,21 @@ export default function Tunnel3D() {
   const [burstInterval, setBurstInterval] = useState(DEFAULT_SETTINGS.burstInterval);
   const [burstMagnitude, setBurstMagnitude] = useState(DEFAULT_SETTINGS.burstMagnitude);
   const [burstDecay, setBurstDecay] = useState(DEFAULT_SETTINGS.burstDecay);
+
+  // Morph oscillators - apply to existing rings per-frame
+  const [morphColorEnabled, setMorphColorEnabled] = useState(DEFAULT_SETTINGS.morphColorEnabled);
+  const [morphColorFunction, setMorphColorFunction] = useState<WaveFunction>(DEFAULT_SETTINGS.morphColorFunction);
+  const [morphColorSpeed, setMorphColorSpeed] = useState(DEFAULT_SETTINGS.morphColorSpeed);
+  const [morphColorMin, setMorphColorMin] = useState(DEFAULT_SETTINGS.morphColorMin);
+  const [morphColorMax, setMorphColorMax] = useState(DEFAULT_SETTINGS.morphColorMax);
+  const [morphColorDelay, setMorphColorDelay] = useState(DEFAULT_SETTINGS.morphColorDelay);
+
+  const [morphRotationEnabled, setMorphRotationEnabled] = useState(DEFAULT_SETTINGS.morphRotationEnabled);
+  const [morphRotationFunction, setMorphRotationFunction] = useState<WaveFunction>(DEFAULT_SETTINGS.morphRotationFunction);
+  const [morphRotationSpeed, setMorphRotationSpeed] = useState(DEFAULT_SETTINGS.morphRotationSpeed);
+  const [morphRotationMin, setMorphRotationMin] = useState(DEFAULT_SETTINGS.morphRotationMin);
+  const [morphRotationMax, setMorphRotationMax] = useState(DEFAULT_SETTINGS.morphRotationMax);
+  const [morphRotationDelay, setMorphRotationDelay] = useState(DEFAULT_SETTINGS.morphRotationDelay);
 
   const [showControls, setShowControls] = useState(true);
   const [showDebug, setShowDebug] = useState(true);
@@ -402,6 +430,18 @@ export default function Tunnel3D() {
         setBrightnessOscSpeed(settings.brightnessOscSpeed ?? DEFAULT_SETTINGS.brightnessOscSpeed);
         setBrightnessOscMin(settings.brightnessOscMin ?? DEFAULT_SETTINGS.brightnessOscMin);
         setBrightnessOscMax(settings.brightnessOscMax ?? DEFAULT_SETTINGS.brightnessOscMax);
+        setMorphColorEnabled(settings.morphColorEnabled ?? DEFAULT_SETTINGS.morphColorEnabled);
+        setMorphColorFunction(settings.morphColorFunction ?? DEFAULT_SETTINGS.morphColorFunction);
+        setMorphColorSpeed(settings.morphColorSpeed ?? DEFAULT_SETTINGS.morphColorSpeed);
+        setMorphColorMin(settings.morphColorMin ?? DEFAULT_SETTINGS.morphColorMin);
+        setMorphColorMax(settings.morphColorMax ?? DEFAULT_SETTINGS.morphColorMax);
+        setMorphColorDelay(settings.morphColorDelay ?? DEFAULT_SETTINGS.morphColorDelay);
+        setMorphRotationEnabled(settings.morphRotationEnabled ?? DEFAULT_SETTINGS.morphRotationEnabled);
+        setMorphRotationFunction(settings.morphRotationFunction ?? DEFAULT_SETTINGS.morphRotationFunction);
+        setMorphRotationSpeed(settings.morphRotationSpeed ?? DEFAULT_SETTINGS.morphRotationSpeed);
+        setMorphRotationMin(settings.morphRotationMin ?? DEFAULT_SETTINGS.morphRotationMin);
+        setMorphRotationMax(settings.morphRotationMax ?? DEFAULT_SETTINGS.morphRotationMax);
+        setMorphRotationDelay(settings.morphRotationDelay ?? DEFAULT_SETTINGS.morphRotationDelay);
       } catch (e) {
         console.error("Failed to load settings from localStorage:", e);
       }
@@ -508,6 +548,20 @@ export default function Tunnel3D() {
   const burstMagnitudeRef = useRef(burstMagnitude);
   const burstDecayRef = useRef(burstDecay);
 
+  // Morph oscillator refs
+  const morphColorEnabledRef = useRef(morphColorEnabled);
+  const morphColorFunctionRef = useRef(morphColorFunction);
+  const morphColorSpeedRef = useRef(morphColorSpeed);
+  const morphColorMinRef = useRef(morphColorMin);
+  const morphColorMaxRef = useRef(morphColorMax);
+  const morphColorDelayRef = useRef(morphColorDelay);
+  const morphRotationEnabledRef = useRef(morphRotationEnabled);
+  const morphRotationFunctionRef = useRef(morphRotationFunction);
+  const morphRotationSpeedRef = useRef(morphRotationSpeed);
+  const morphRotationMinRef = useRef(morphRotationMin);
+  const morphRotationMaxRef = useRef(morphRotationMax);
+  const morphRotationDelayRef = useRef(morphRotationDelay);
+
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
@@ -518,6 +572,24 @@ export default function Tunnel3D() {
     burstMagnitudeRef.current = burstMagnitude;
     burstDecayRef.current = burstDecay;
   }, [burstEnabled, burstInterval, burstMagnitude, burstDecay]);
+
+  useEffect(() => {
+    morphColorEnabledRef.current = morphColorEnabled;
+    morphColorFunctionRef.current = morphColorFunction;
+    morphColorSpeedRef.current = morphColorSpeed;
+    morphColorMinRef.current = morphColorMin;
+    morphColorMaxRef.current = morphColorMax;
+    morphColorDelayRef.current = morphColorDelay;
+  }, [morphColorEnabled, morphColorFunction, morphColorSpeed, morphColorMin, morphColorMax, morphColorDelay]);
+
+  useEffect(() => {
+    morphRotationEnabledRef.current = morphRotationEnabled;
+    morphRotationFunctionRef.current = morphRotationFunction;
+    morphRotationSpeedRef.current = morphRotationSpeed;
+    morphRotationMinRef.current = morphRotationMin;
+    morphRotationMaxRef.current = morphRotationMax;
+    morphRotationDelayRef.current = morphRotationDelay;
+  }, [morphRotationEnabled, morphRotationFunction, morphRotationSpeed, morphRotationMin, morphRotationMax, morphRotationDelay]);
 
   useEffect(() => {
     cameraRotationRef.current = cameraRotation;
@@ -716,6 +788,18 @@ export default function Tunnel3D() {
       brightnessOscSpeed,
       brightnessOscMin,
       brightnessOscMax,
+      morphColorEnabled,
+      morphColorFunction,
+      morphColorSpeed,
+      morphColorMin,
+      morphColorMax,
+      morphColorDelay,
+      morphRotationEnabled,
+      morphRotationFunction,
+      morphRotationSpeed,
+      morphRotationMin,
+      morphRotationMax,
+      morphRotationDelay,
     };
     localStorage.setItem("tunnel3d-settings", JSON.stringify(settings));
   }, [
@@ -786,6 +870,18 @@ export default function Tunnel3D() {
     brightnessOscSpeed,
     brightnessOscMin,
     brightnessOscMax,
+    morphColorEnabled,
+    morphColorFunction,
+    morphColorSpeed,
+    morphColorMin,
+    morphColorMax,
+    morphColorDelay,
+    morphRotationEnabled,
+    morphRotationFunction,
+    morphRotationSpeed,
+    morphRotationMin,
+    morphRotationMax,
+    morphRotationDelay,
   ]);
 
   // Clear all oscillators function
@@ -800,6 +896,8 @@ export default function Tunnel3D() {
     setTubeThicknessOscEnabled(false);
     setSaturationOscEnabled(false);
     setBrightnessOscEnabled(false);
+    setMorphColorEnabled(false);
+    setMorphRotationEnabled(false);
   };
 
   // Reset all settings to defaults
@@ -871,6 +969,18 @@ export default function Tunnel3D() {
     setBrightnessOscSpeed(DEFAULT_SETTINGS.brightnessOscSpeed);
     setBrightnessOscMin(DEFAULT_SETTINGS.brightnessOscMin);
     setBrightnessOscMax(DEFAULT_SETTINGS.brightnessOscMax);
+    setMorphColorEnabled(DEFAULT_SETTINGS.morphColorEnabled);
+    setMorphColorFunction(DEFAULT_SETTINGS.morphColorFunction);
+    setMorphColorSpeed(DEFAULT_SETTINGS.morphColorSpeed);
+    setMorphColorMin(DEFAULT_SETTINGS.morphColorMin);
+    setMorphColorMax(DEFAULT_SETTINGS.morphColorMax);
+    setMorphColorDelay(DEFAULT_SETTINGS.morphColorDelay);
+    setMorphRotationEnabled(DEFAULT_SETTINGS.morphRotationEnabled);
+    setMorphRotationFunction(DEFAULT_SETTINGS.morphRotationFunction);
+    setMorphRotationSpeed(DEFAULT_SETTINGS.morphRotationSpeed);
+    setMorphRotationMin(DEFAULT_SETTINGS.morphRotationMin);
+    setMorphRotationMax(DEFAULT_SETTINGS.morphRotationMax);
+    setMorphRotationDelay(DEFAULT_SETTINGS.morphRotationDelay);
   };
 
   useEffect(() => {
@@ -1097,6 +1207,37 @@ export default function Tunnel3D() {
 
         // Track burst state for next frame
         wasBurstEnabled = burstEnabledRef.current;
+
+        // Apply morph oscillators to all existing rings per-frame
+        if (morphColorEnabledRef.current || morphRotationEnabledRef.current) {
+          const colorWave = morphColorEnabledRef.current ? waveFunctions[morphColorFunctionRef.current] : null;
+          const rotWave = morphRotationEnabledRef.current ? waveFunctions[morphRotationFunctionRef.current] : null;
+
+          rings.forEach((ring, i) => {
+            // Morph color: shift hue based on oscillator with per-ring delay
+            if (colorWave) {
+              const phaseOffset = i * morphColorDelayRef.current;
+              const normalizedWave = (colorWave(time * morphColorSpeedRef.current - phaseOffset) + 1) / 2;
+              const morphHue = morphColorMinRef.current + normalizedWave * (morphColorMaxRef.current - morphColorMinRef.current);
+              const baseHue = ring.userData.hue;
+              const baseSaturation = ring.userData.saturation;
+              const baseBrightness = ring.userData.brightness;
+              (ring.material as THREE.MeshBasicMaterial).color.setHSL(
+                ((baseHue + morphHue) % 360) / 360,
+                baseSaturation,
+                baseBrightness
+              );
+            }
+
+            // Morph rotation: add/subtract to ring's current rotation
+            if (rotWave) {
+              const phaseOffset = i * morphRotationDelayRef.current;
+              const normalizedWave = (rotWave(time * morphRotationSpeedRef.current - phaseOffset) + 1) / 2;
+              const morphRot = morphRotationMinRef.current + normalizedWave * (morphRotationMaxRef.current - morphRotationMinRef.current);
+              ring.rotation.z += morphRot * 0.01; // Scale down for smooth per-frame addition
+            }
+          });
+        }
 
         // Calculate minimum Z once for all regenerations this frame
         let minZ = Infinity;
@@ -2469,6 +2610,156 @@ export default function Tunnel3D() {
                 <label style={{ display: "block", fontSize: "12px" }}>
                   Max: {brightnessOscMax.toFixed(2)}
                   <input type="range" min="0" max="1" step="0.01" value={brightnessOscMax} onChange={(e) => setBrightnessOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+          </div>
+
+          {/* Morph Oscillators Section */}
+          <div style={{ marginTop: "30px", paddingTop: "20px", borderTop: "1px solid #444" }}>
+            <h3 style={{ margin: "0 0 15px 0", fontSize: "14px", color: "#cc88ff", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Morph Oscillators
+            </h3>
+            <div style={{ fontSize: "11px", color: "#888", marginBottom: "15px" }}>
+              Morph existing rings in real-time. Delay offsets the oscillator phase per ring for wave-like effects.
+            </div>
+
+            {/* Morph Color */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Color Morph {morphColorEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={morphColorEnabled} onChange={(e) => setMorphColorEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={morphColorFunction} onChange={(e) => setMorphColorFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {morphColorSpeed.toFixed(2)}
+                  <input type="range" min="0.001" max="5" step="0.001" value={morphColorSpeed} onChange={(e) => setMorphColorSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min Hue: {morphColorMin.toFixed(0)}°
+                  <input type="range" min="0" max="360" step="1" value={morphColorMin} onChange={(e) => setMorphColorMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Max Hue: {morphColorMax.toFixed(0)}°
+                  <input type="range" min="0" max="360" step="1" value={morphColorMax} onChange={(e) => setMorphColorMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Delay: {morphColorDelay.toFixed(3)}
+                  <input type="range" min="0" max="1" step="0.001" value={morphColorDelay} onChange={(e) => setMorphColorDelay(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+                    0 = all rings in sync, higher = more wave offset between rings
+                  </div>
+                </label>
+              </div>
+            </details>
+
+            {/* Morph Rotation */}
+            <details style={{ marginBottom: "15px" }}>
+              <summary style={{ cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" }}>
+                Rotation Morph {morphRotationEnabled ? "✓" : ""}
+              </summary>
+              <div style={{ padding: "10px 0 0 10px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  <input type="checkbox" checked={morphRotationEnabled} onChange={(e) => setMorphRotationEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Function:
+                  <select value={morphRotationFunction} onChange={(e) => setMorphRotationFunction(e.target.value as WaveFunction)} style={{ marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" }}>
+                    <optgroup label="Basic">
+                      <option value="sin">Sin</option>
+                      <option value="cos">Cos</option>
+                      <option value="triangle">Triangle</option>
+                      <option value="sawtooth">Sawtooth</option>
+                      <option value="square">Square</option>
+                      <option value="pulse">Pulse</option>
+                    </optgroup>
+                    <optgroup label="Smooth">
+                      <option value="smoothstep">Smooth Step</option>
+                      <option value="breath">Breath</option>
+                      <option value="circular">Circular</option>
+                    </optgroup>
+                    <optgroup label="Dynamic">
+                      <option value="bounce">Bounce</option>
+                      <option value="elastic">Elastic</option>
+                      <option value="wobble">Wobble</option>
+                    </optgroup>
+                    <optgroup label="Mathematical">
+                      <option value="exponential">Exponential</option>
+                      <option value="logarithmic">Logarithmic</option>
+                      <option value="spiral">Spiral</option>
+                    </optgroup>
+                    <optgroup label="Complex">
+                      <option value="double-sin">Double Sin</option>
+                      <option value="triple-sin">Triple Sin</option>
+                      <option value="heart">Heart</option>
+                      <option value="chaos">Chaos</option>
+                    </optgroup>
+                    <optgroup label="Geometric">
+                      <option value="zigzag">Zigzag</option>
+                      <option value="steps">Steps</option>
+                    </optgroup>
+                  </select>
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Speed: {morphRotationSpeed.toFixed(2)}
+                  <input type="range" min="0.001" max="5" step="0.001" value={morphRotationSpeed} onChange={(e) => setMorphRotationSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Min: {morphRotationMin.toFixed(2)}
+                  <input type="range" min="-10" max="10" step="0.1" value={morphRotationMin} onChange={(e) => setMorphRotationMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
+                  Max: {morphRotationMax.toFixed(2)}
+                  <input type="range" min="-10" max="10" step="0.1" value={morphRotationMax} onChange={(e) => setMorphRotationMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Delay: {morphRotationDelay.toFixed(3)}
+                  <input type="range" min="0" max="1" step="0.001" value={morphRotationDelay} onChange={(e) => setMorphRotationDelay(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+                    0 = all rings in sync, higher = more wave offset between rings
+                  </div>
                 </label>
               </div>
             </details>
