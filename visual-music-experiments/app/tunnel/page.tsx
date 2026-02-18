@@ -294,6 +294,17 @@ export default function Tunnel3D() {
     rotationSpeed: 0,
     generationRotation: 0,
     actualRotation: 0,
+    // Oscillator current values
+    oscHue: 0,
+    oscRadius: 0,
+    oscSpacing: 0,
+    oscSegments: 0,
+    oscCameraRotation: 0,
+    oscRotationSpeed: 0,
+    oscShapeRotation: 0,
+    oscTubeThickness: 0,
+    oscSaturation: 0,
+    oscBrightness: 0,
   });
   // State for display only, updated on interval
   const [debugInfo, setDebugInfo] = useState({
@@ -306,6 +317,16 @@ export default function Tunnel3D() {
     rotationSpeed: 0,
     generationRotation: 0,
     actualRotation: 0,
+    oscHue: 0,
+    oscRadius: 0,
+    oscSpacing: 0,
+    oscSegments: 0,
+    oscCameraRotation: 0,
+    oscRotationSpeed: 0,
+    oscShapeRotation: 0,
+    oscTubeThickness: 0,
+    oscSaturation: 0,
+    oscBrightness: 0,
   });
 
   // Load settings from localStorage after mount (client-side only)
@@ -967,6 +988,7 @@ export default function Tunnel3D() {
           cameraRotationOscMaxRef.current
         );
         camera.rotation.z = currentCameraRotation;
+        debugInfoRef.current.oscCameraRotation = currentCameraRotation;
 
         // Calculate current shape rotation and rotation speed for debug display
         const currentShapeRotationDebug = getOscillatedValue(
@@ -993,6 +1015,8 @@ export default function Tunnel3D() {
         // Update debug info for rotation values every frame
         debugInfoRef.current.shapeRotation = currentShapeRotationDebug;
         debugInfoRef.current.rotationSpeed = currentRotationSpeedDebug;
+        debugInfoRef.current.oscShapeRotation = currentShapeRotationDebug;
+        debugInfoRef.current.oscRotationSpeed = currentRotationSpeedDebug;
         debugInfoRef.current.generationRotation = shapeRotationRef.current;
         debugInfoRef.current.actualRotation = actualRotation;
         debugInfoRef.current.time = time;
@@ -1165,6 +1189,15 @@ export default function Tunnel3D() {
               brightnessOscMaxRef.current
             );
 
+            // Update oscillator debug values
+            debugInfoRef.current.oscHue = currentHue;
+            debugInfoRef.current.oscRadius = currentRadius;
+            debugInfoRef.current.oscSpacing = currentSpacing;
+            debugInfoRef.current.oscSegments = currentSegments;
+            debugInfoRef.current.oscTubeThickness = currentTubeThickness;
+            debugInfoRef.current.oscSaturation = currentSaturation;
+            debugInfoRef.current.oscBrightness = currentBrightness;
+
             // Place this ring behind the furthest back ring
             ring.position.z = minZ - currentSpacing;
             // Update minZ for next ring that might regenerate this frame
@@ -1319,6 +1352,19 @@ export default function Tunnel3D() {
               </div>
               <div style={{ fontSize: "11px", opacity: "0.7" }}>Rot Speed: {debugInfo.rotationSpeed.toFixed(2)}</div>
               <div style={{ fontSize: "11px", opacity: "0.7" }}>Gen Rot: {(debugInfo.generationRotation * 180 / Math.PI).toFixed(1)}°</div>
+              <div style={{ borderTop: "1px solid rgba(102, 204, 255, 0.2)", marginTop: "8px", paddingTop: "8px", fontWeight: "bold", color: "#88ff88" }}>
+                Oscillator Values
+              </div>
+              <div style={{ fontSize: "11px", opacity: hueOscEnabled ? 1 : 0.4 }}>Hue: {debugInfo.oscHue.toFixed(1)}°</div>
+              <div style={{ fontSize: "11px", opacity: radiusOscEnabled ? 1 : 0.4 }}>Radius: {debugInfo.oscRadius.toFixed(2)}</div>
+              <div style={{ fontSize: "11px", opacity: spacingOscEnabled ? 1 : 0.4 }}>Spacing: {debugInfo.oscSpacing.toFixed(2)}</div>
+              <div style={{ fontSize: "11px", opacity: segmentsOscEnabled ? 1 : 0.4 }}>Segments: {debugInfo.oscSegments}</div>
+              <div style={{ fontSize: "11px", opacity: cameraRotationOscEnabled ? 1 : 0.4 }}>Cam Rot: {(debugInfo.oscCameraRotation * 180 / Math.PI).toFixed(1)}°</div>
+              <div style={{ fontSize: "11px", opacity: rotationSpeedOscEnabled ? 1 : 0.4 }}>Rot Speed: {debugInfo.oscRotationSpeed.toFixed(2)}</div>
+              <div style={{ fontSize: "11px", opacity: shapeRotationOscEnabled ? 1 : 0.4 }}>Shape Rot: {(debugInfo.oscShapeRotation * 180 / Math.PI).toFixed(1)}°</div>
+              <div style={{ fontSize: "11px", opacity: tubeThicknessOscEnabled ? 1 : 0.4 }}>Tube Thick: {debugInfo.oscTubeThickness.toFixed(3)}</div>
+              <div style={{ fontSize: "11px", opacity: saturationOscEnabled ? 1 : 0.4 }}>Saturation: {debugInfo.oscSaturation.toFixed(2)}</div>
+              <div style={{ fontSize: "11px", opacity: brightnessOscEnabled ? 1 : 0.4 }}>Brightness: {debugInfo.oscBrightness.toFixed(2)}</div>
             </div>
           )}
         </>
