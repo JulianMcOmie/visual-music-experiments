@@ -191,15 +191,15 @@ const DEFAULT_SETTINGS = {
   // Morph oscillators - apply to existing rings per-frame
   morphColorEnabled: false,
   morphColorFunction: "sin" as WaveFunction,
-  morphColorSpeed: 1,
+  morphColorSpeed: 0.1,
   morphColorMin: 0,
   morphColorMax: 360,
   morphColorDelay: 0,
   morphRotationEnabled: false,
   morphRotationFunction: "sin" as WaveFunction,
-  morphRotationSpeed: 1,
-  morphRotationMin: -5,
-  morphRotationMax: 5,
+  morphRotationSpeed: 0.1,
+  morphRotationMin: -1,
+  morphRotationMax: 1,
   morphRotationDelay: 0,
 };
 
@@ -1229,12 +1229,12 @@ export default function Tunnel3D() {
               );
             }
 
-            // Morph rotation: add/subtract to ring's current rotation
+            // Morph rotation: set rotation offset based on oscillator (absolute, not accumulating)
             if (rotWave) {
               const phaseOffset = i * morphRotationDelayRef.current;
               const normalizedWave = (rotWave(time * morphRotationSpeedRef.current - phaseOffset) + 1) / 2;
               const morphRot = morphRotationMinRef.current + normalizedWave * (morphRotationMaxRef.current - morphRotationMinRef.current);
-              ring.rotation.z += morphRot * 0.01; // Scale down for smooth per-frame addition
+              ring.rotation.z = (ring.userData.shapeRotation ?? 0) + morphRot;
             }
           });
         }
@@ -2673,8 +2673,8 @@ export default function Tunnel3D() {
                   </select>
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
-                  Speed: {morphColorSpeed.toFixed(2)}
-                  <input type="range" min="0.001" max="5" step="0.001" value={morphColorSpeed} onChange={(e) => setMorphColorSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  Speed: {morphColorSpeed.toFixed(3)}
+                  <input type="range" min="0.001" max="0.5" step="0.001" value={morphColorSpeed} onChange={(e) => setMorphColorSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
                   Min Hue: {morphColorMin.toFixed(0)}°
@@ -2685,8 +2685,8 @@ export default function Tunnel3D() {
                   <input type="range" min="0" max="360" step="1" value={morphColorMax} onChange={(e) => setMorphColorMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", fontSize: "12px" }}>
-                  Delay: {morphColorDelay.toFixed(3)}
-                  <input type="range" min="0" max="1" step="0.001" value={morphColorDelay} onChange={(e) => setMorphColorDelay(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  Delay: {morphColorDelay.toFixed(4)}
+                  <input type="range" min="0" max="0.05" step="0.0001" value={morphColorDelay} onChange={(e) => setMorphColorDelay(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                   <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
                     0 = all rings in sync, higher = more wave offset between rings
                   </div>
@@ -2743,20 +2743,20 @@ export default function Tunnel3D() {
                   </select>
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
-                  Speed: {morphRotationSpeed.toFixed(2)}
-                  <input type="range" min="0.001" max="5" step="0.001" value={morphRotationSpeed} onChange={(e) => setMorphRotationSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  Speed: {morphRotationSpeed.toFixed(3)}
+                  <input type="range" min="0.001" max="0.5" step="0.001" value={morphRotationSpeed} onChange={(e) => setMorphRotationSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
-                  Min: {morphRotationMin.toFixed(2)}
-                  <input type="range" min="-10" max="10" step="0.1" value={morphRotationMin} onChange={(e) => setMorphRotationMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  Min: {morphRotationMin.toFixed(2)} rad
+                  <input type="range" min={-Math.PI} max={Math.PI} step="0.01" value={morphRotationMin} onChange={(e) => setMorphRotationMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", marginBottom: "8px", fontSize: "12px" }}>
-                  Max: {morphRotationMax.toFixed(2)}
-                  <input type="range" min="-10" max="10" step="0.1" value={morphRotationMax} onChange={(e) => setMorphRotationMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  Max: {morphRotationMax.toFixed(2)} rad
+                  <input type="range" min={-Math.PI} max={Math.PI} step="0.01" value={morphRotationMax} onChange={(e) => setMorphRotationMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", fontSize: "12px" }}>
-                  Delay: {morphRotationDelay.toFixed(3)}
-                  <input type="range" min="0" max="1" step="0.001" value={morphRotationDelay} onChange={(e) => setMorphRotationDelay(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  Delay: {morphRotationDelay.toFixed(4)}
+                  <input type="range" min="0" max="0.05" step="0.0001" value={morphRotationDelay} onChange={(e) => setMorphRotationDelay(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                   <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
                     0 = all rings in sync, higher = more wave offset between rings
                   </div>
