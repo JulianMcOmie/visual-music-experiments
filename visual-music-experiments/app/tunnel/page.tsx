@@ -1476,7 +1476,7 @@ export default function Tunnel3D() {
               id="numRings"
               type="range"
               min="10"
-              max="1000"
+              max="3000"
               step="1"
               value={numRings}
               onChange={(e) => setNumRings(Number(e.target.value))}
