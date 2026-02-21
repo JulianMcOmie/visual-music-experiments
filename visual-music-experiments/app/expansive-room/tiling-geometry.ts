@@ -110,12 +110,15 @@ function randomParams(tiling: IsohedralTiling, seed: number): number[] {
 
 /**
  * Create a merged BufferGeometry for one surface, filled with
- * TactileJS tiling tiles, colored with vertex colors.
+ * TactileJS tiling tiles.
+ *
+ * Vertex colors encode tile identity for the shader:
+ *   R = aspect fraction (aspect / numAspects) — used for hue offset
+ *   G = lightness (0.35 + variation per aspect)
+ *   B = 0 (unused)
  *
  * wallW/wallH: dimensions of the surface in world units
  * wallTransform: 4x4 matrix positioning the surface in the scene
- * hueBase: base hue [0,1] for coloring tiles
- * saturation: color saturation [0,1]
  * tileScale: world-space size of tiles
  * tilingTypeIndex: index into tilingTypes (0-80)
  * edgeCurvature: how curved the tile edges are (0-1)
@@ -126,8 +129,6 @@ export function createTilingWallGeometry(
   wallH: number,
   tileScale: number,
   wallTransform: THREE.Matrix4,
-  hueBase: number,
-  saturation: number,
   edgeCurvature: number = 0.5,
   tileRotation: number = 0,
 ): THREE.BufferGeometry {
@@ -186,8 +187,7 @@ export function createTilingWallGeometry(
   const idxArray =
     totalVerts > 65535 ? new Uint32Array(totalIndices) : new Uint16Array(totalIndices);
 
-  const numAspects = tiling.numAspects();
-  const color = new THREE.Color();
+  const numAspects = Math.max(tiling.numAspects(), 1);
   const tempVec = new THREE.Vector3();
 
   for (let ti = 0; ti < tiles.length; ti++) {
@@ -195,9 +195,9 @@ export function createTilingWallGeometry(
     const vertOff = ti * vertsPerTile;
     const idxOff = ti * protoIndices.length;
 
-    const hue = (hueBase + (tile.aspect / Math.max(numAspects, 1)) * 0.15) % 1;
+    // Encode tile identity in vertex colors for the shader
+    const aspectFraction = tile.aspect / numAspects;
     const lightness = 0.35 + (tile.aspect % 3) * 0.1;
-    color.setHSL(hue, saturation, lightness);
 
     for (let vi = 0; vi < vertsPerTile; vi++) {
       const px = protoFlat[vi * 2];
@@ -218,9 +218,9 @@ export function createTilingWallGeometry(
       posArray[idx3 + 1] = tempVec.y;
       posArray[idx3 + 2] = tempVec.z;
 
-      colorArray[idx3] = color.r;
-      colorArray[idx3 + 1] = color.g;
-      colorArray[idx3 + 2] = color.b;
+      colorArray[idx3] = aspectFraction;
+      colorArray[idx3 + 1] = lightness;
+      colorArray[idx3 + 2] = 0;
     }
 
     for (let ii = 0; ii < protoIndices.length; ii++) {

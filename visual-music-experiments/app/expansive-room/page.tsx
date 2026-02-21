@@ -1,34 +1,155 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { createTilingWallGeometry } from "./tiling-geometry";
 
+// HSL-to-RGB shader function + tile coloring with lighting
+const vertexShader = /* glsl */ `
+  #include <common>
+  #include <lights_pars_begin>
+
+  attribute vec3 color;
+  varying vec3 vColor;
+  varying vec3 vNormal;
+  varying vec3 vViewPosition;
+
+  void main() {
+    vColor = color;
+    vec3 transformedNormal = normalMatrix * normal;
+    vNormal = normalize(transformedNormal);
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    vViewPosition = -mvPosition.xyz;
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+const fragmentShader = /* glsl */ `
+  #include <common>
+  #include <packing>
+  #include <lights_pars_begin>
+
+  uniform float uHue;
+  uniform float uSaturation;
+
+  varying vec3 vColor;
+  varying vec3 vNormal;
+  varying vec3 vViewPosition;
+
+  // Standard HSL to RGB conversion
+  vec3 hsl2rgb(float h, float s, float l) {
+    float c = (1.0 - abs(2.0 * l - 1.0)) * s;
+    float hp = h * 6.0;
+    float x = c * (1.0 - abs(mod(hp, 2.0) - 1.0));
+    vec3 rgb;
+    if (hp < 1.0) rgb = vec3(c, x, 0.0);
+    else if (hp < 2.0) rgb = vec3(x, c, 0.0);
+    else if (hp < 3.0) rgb = vec3(0.0, c, x);
+    else if (hp < 4.0) rgb = vec3(0.0, x, c);
+    else if (hp < 5.0) rgb = vec3(x, 0.0, c);
+    else rgb = vec3(c, 0.0, x);
+    float m = l - c * 0.5;
+    return rgb + m;
+  }
+
+  void main() {
+    // Decode tile identity from vertex colors
+    float aspectFraction = vColor.r;
+    float lightness = vColor.g;
+
+    // Compute final hue from uniform + per-tile offset
+    float hue = fract(uHue + aspectFraction * 0.15);
+    vec3 baseColor = hsl2rgb(hue, uSaturation, lightness);
+
+    // Simple lighting using Three.js light data
+    vec3 normal = normalize(vNormal);
+    vec3 totalLight = vec3(0.0);
+
+    // Ambient lights
+    totalLight += ambientLightColor;
+
+    // Hemisphere lights
+    #if NUM_HEMI_LIGHTS > 0
+      for (int i = 0; i < NUM_HEMI_LIGHTS; i++) {
+        float dotNL = dot(normal, hemisphereLights[i].direction);
+        float weight = 0.5 + 0.5 * dotNL;
+        totalLight += mix(hemisphereLights[i].groundColor, hemisphereLights[i].skyColor, weight);
+      }
+    #endif
+
+    // Point lights
+    #if NUM_POINT_LIGHTS > 0
+      for (int i = 0; i < NUM_POINT_LIGHTS; i++) {
+        vec3 lVector = pointLights[i].position - vViewPosition;
+        float lDistance = length(lVector);
+        vec3 lDir = normalize(lVector);
+
+        float dotNL = max(dot(normal, lDir), 0.0);
+
+        // Distance attenuation (physically based)
+        float distanceFalloff = 1.0 / max(lDistance * lDistance, 0.01);
+        if (pointLights[i].distance > 0.0) {
+          float ratio = clamp(1.0 - pow(lDistance / pointLights[i].distance, 4.0), 0.0, 1.0);
+          distanceFalloff *= ratio * ratio;
+        }
+
+        totalLight += pointLights[i].color * dotNL * distanceFalloff;
+      }
+    #endif
+
+    vec3 finalColor = baseColor * totalLight;
+
+    // Rough tone mapping to keep colors from blowing out
+    finalColor = finalColor / (finalColor + vec3(1.0));
+
+    gl_FragColor = vec4(finalColor, 1.0);
+  }
+`;
+
+function createTileMaterial(hue: number, saturation: number): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      ...THREE.UniformsLib.lights,
+      uHue: { value: hue },
+      uSaturation: { value: saturation },
+    },
+    vertexShader,
+    fragmentShader,
+    lights: true,
+    side: THREE.DoubleSide,
+  });
+}
 
 export default function ExpansiveRoom() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPreview, setIsPreview] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
-  // Parameters
+  // Expensive params (trigger geometry rebuild) — kept as state
   const [tilingType, setTilingType] = useState(3);
-  const [baseHue, setBaseHue] = useState(0.58);
   const [roomRadius, setRoomRadius] = useState(200);
   const [roomHeight, setRoomHeight] = useState(200);
   const [tileScale, setTileScale] = useState(8);
   const [edgeCurvature, setEdgeCurvature] = useState(0.5);
   const [tileRotation, setTileRotation] = useState(0);
-  const [fogDensity, setFogDensity] = useState(0.003);
-  const [brightness, setBrightness] = useState(1.2);
-  const [saturation, setSaturation] = useState(0.55);
+  const [roomDepth, setRoomDepth] = useState(400);
 
-  // Refs for Three.js objects we need to update
+  // Cheap params (uniform-driven) — refs for instant updates, state for UI display
+  const hueRef = useRef(0.58);
+  const saturationRef = useRef(0.55);
+  const brightnessRef = useRef(1.2);
+  const [hueDisplay, setHueDisplay] = useState(0.58);
+  const [saturationDisplay, setSaturationDisplay] = useState(0.55);
+  const [brightnessDisplay, setBrightnessDisplay] = useState(1.2);
+
+  // Refs for Three.js objects
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const materialRef = useRef<THREE.MeshStandardMaterial | null>(null);
+  const materialRef = useRef<THREE.ShaderMaterial | null>(null);
   const tiledMeshesRef = useRef<THREE.Mesh[]>([]);
   const lightsRef = useRef<THREE.Light[]>([]);
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     if (window.location.search.includes("preview")) {
@@ -47,42 +168,50 @@ export default function ExpansiveRoom() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.4;
+    renderer.toneMappingExposure = brightnessRef.current;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x080818);
-    scene.fog = new THREE.FogExp2(0x080818, 0.003);
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(
       70,
       window.innerWidth / window.innerHeight,
       0.5,
-      1000,
+      5000,
     );
-    camera.position.set(30, 20, 30);
-    camera.lookAt(0, 40, -80);
+    camera.position.set(0, 40, 100);
+    camera.lookAt(0, 40, -200);
     cameraRef.current = camera;
 
-    const material = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      side: THREE.DoubleSide,
-      roughness: 0.6,
-      metalness: 0.05,
-    });
+    const material = createTileMaterial(hueRef.current, saturationRef.current);
     materialRef.current = material;
 
     const onResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.render(scene, camera);
     };
     window.addEventListener("resize", onResize);
 
+    // Animation loop — reads cheap params from refs every frame
+    const animate = () => {
+      rafRef.current = requestAnimationFrame(animate);
+      const mat = materialRef.current;
+      const r = rendererRef.current;
+      if (!mat || !r) return;
+
+      mat.uniforms.uHue.value = hueRef.current;
+      mat.uniforms.uSaturation.value = saturationRef.current;
+      r.toneMappingExposure = brightnessRef.current;
+      r.render(scene, camera);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+
     return () => {
+      cancelAnimationFrame(rafRef.current);
       window.removeEventListener("resize", onResize);
       renderer.dispose();
       container.removeChild(renderer.domElement);
@@ -95,13 +224,11 @@ export default function ExpansiveRoom() {
     };
   }, []);
 
-  // Rebuild scene when parameters change
+  // Rebuild geometry when expensive params change
   useEffect(() => {
     const scene = sceneRef.current;
-    const camera = cameraRef.current;
-    const renderer = rendererRef.current;
     const material = materialRef.current;
-    if (!scene || !camera || !renderer || !material) return;
+    if (!scene || !material) return;
 
     // Remove old tiled meshes
     for (const mesh of tiledMeshesRef.current) {
@@ -116,13 +243,9 @@ export default function ExpansiveRoom() {
     }
     lightsRef.current = [];
 
-    // Update fog
-    scene.fog = new THREE.FogExp2(0x080818, fogDensity);
+    scene.fog = null;
 
-    // Update tone mapping exposure for brightness
-    renderer.toneMappingExposure = brightness;
-
-    // Lighting — brighter defaults
+    // Lighting
     const ambient = new THREE.AmbientLight(0x667799, 1.0);
     scene.add(ambient);
     lightsRef.current.push(ambient);
@@ -131,112 +254,80 @@ export default function ExpansiveRoom() {
     scene.add(hemiLight);
     lightsRef.current.push(hemiLight);
 
-    const centralLight = new THREE.PointLight(0xffeedd, 3, roomRadius * 3, 1.2);
+    const maxDim = Math.max(roomRadius, roomDepth);
+    const centralLight = new THREE.PointLight(0xffeedd, 3, maxDim * 3, 1.2);
     centralLight.position.set(0, roomHeight * 0.85, 0);
     scene.add(centralLight);
     lightsRef.current.push(centralLight);
 
-    // Ring of point lights around the room
-    const numLightRing = 8;
-    for (let i = 0; i < numLightRing; i++) {
-      const a = (i / numLightRing) * Math.PI * 2;
-      const r = roomRadius * 0.5;
-      const pl = new THREE.PointLight(0xddeeff, 1.5, roomRadius * 2, 1.5);
-      pl.position.set(Math.sin(a) * r, roomHeight * 0.4, Math.cos(a) * r);
-      scene.add(pl);
-      lightsRef.current.push(pl);
+    const numLightsZ = Math.max(3, Math.ceil(roomDepth / 200));
+    for (let zi = 0; zi < numLightsZ; zi++) {
+      const zPos = -roomDepth / 2 + (zi + 0.5) * (roomDepth / numLightsZ);
+      for (let ai = 0; ai < 4; ai++) {
+        const a = (ai / 4) * Math.PI * 2;
+        const pl = new THREE.PointLight(0xddeeff, 1.5, maxDim * 2, 1.5);
+        pl.position.set(Math.sin(a) * roomRadius * 0.5, roomHeight * 0.4, zPos + Math.cos(a) * roomRadius * 0.5);
+        scene.add(pl);
+        lightsRef.current.push(pl);
+      }
     }
 
-    // Lower fill lights
-    const fillPositions = [
-      [0, roomHeight * 0.15, 0],
-      [roomRadius * 0.3, roomHeight * 0.6, roomRadius * 0.3],
-      [-roomRadius * 0.3, roomHeight * 0.6, -roomRadius * 0.3],
-    ];
-    for (const [x, y, z] of fillPositions) {
-      const fl = new THREE.PointLight(0xccbbaa, 0.8, roomRadius * 2, 1.8);
-      fl.position.set(x, y, z);
+    const fillZPositions = [0, -roomDepth * 0.3, roomDepth * 0.3];
+    for (const fz of fillZPositions) {
+      const fl = new THREE.PointLight(0xccbbaa, 0.8, maxDim * 2, 1.8);
+      fl.position.set(0, roomHeight * 0.15, fz);
       scene.add(fl);
       lightsRef.current.push(fl);
     }
 
-    // Build octagonal room — same tiling type and hue on every surface
-    const numWalls = 8;
-    const angleStep = (Math.PI * 2) / numWalls;
-    const wallWidth = 2 * roomRadius * Math.tan(angleStep / 2);
+    // Build rectangular hall
+    const roomWidth = roomRadius * 2;
+    const halfW = roomWidth / 2;
+    const halfD = roomDepth / 2;
+
+    const addSurface = (w: number, h: number, transform: THREE.Matrix4) => {
+      const geo = createTilingWallGeometry(
+        tilingType, w, h, tileScale, transform,
+        edgeCurvature, tileRotation,
+      );
+      const mesh = new THREE.Mesh(geo, material);
+      scene.add(mesh);
+      tiledMeshesRef.current.push(mesh);
+    };
 
     // Floor
-    const floorTransform = new THREE.Matrix4();
-    floorTransform.makeRotationX(-Math.PI / 2);
-    const floorGeo = createTilingWallGeometry(
-      tilingType,
-      roomRadius * 2.5,
-      roomRadius * 2.5,
-      tileScale,
-      floorTransform,
-      baseHue,
-      saturation,
-      edgeCurvature,
-      tileRotation,
-    );
-    const floorMesh = new THREE.Mesh(floorGeo, material);
-    scene.add(floorMesh);
-    tiledMeshesRef.current.push(floorMesh);
+    const floorT = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
+    addSurface(roomWidth, roomDepth, floorT);
 
     // Ceiling
-    const ceilingTransform = new THREE.Matrix4();
-    ceilingTransform.makeRotationX(Math.PI / 2);
-    const ceilingTranslate = new THREE.Matrix4().makeTranslation(0, roomHeight, 0);
-    ceilingTransform.premultiply(ceilingTranslate);
-    const ceilingGeo = createTilingWallGeometry(
-      tilingType,
-      roomRadius * 2.5,
-      roomRadius * 2.5,
-      tileScale,
-      ceilingTransform,
-      baseHue,
-      saturation,
-      edgeCurvature,
-      tileRotation,
-    );
-    const ceilingMesh = new THREE.Mesh(ceilingGeo, material);
-    scene.add(ceilingMesh);
-    tiledMeshesRef.current.push(ceilingMesh);
+    const ceilT = new THREE.Matrix4();
+    ceilT.multiply(new THREE.Matrix4().makeTranslation(0, roomHeight, 0));
+    ceilT.multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2));
+    addSurface(roomWidth, roomDepth, ceilT);
 
-    // 8 Walls
-    for (let i = 0; i < numWalls; i++) {
-      const angle = i * angleStep;
+    // Left wall
+    const leftT = new THREE.Matrix4();
+    leftT.multiply(new THREE.Matrix4().makeTranslation(-halfW, roomHeight / 2, 0));
+    leftT.multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2));
+    addSurface(roomDepth, roomHeight, leftT);
 
-      const cx = Math.sin(angle) * roomRadius;
-      const cz = Math.cos(angle) * roomRadius;
+    // Right wall
+    const rightT = new THREE.Matrix4();
+    rightT.multiply(new THREE.Matrix4().makeTranslation(halfW, roomHeight / 2, 0));
+    rightT.multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 2));
+    addSurface(roomDepth, roomHeight, rightT);
 
-      const wallTransform = new THREE.Matrix4();
-      const translateUp = new THREE.Matrix4().makeTranslation(0, roomHeight / 2, 0);
-      const rotY = new THREE.Matrix4().makeRotationY(angle);
-      const translateOut = new THREE.Matrix4().makeTranslation(cx, 0, cz);
+    // Back wall
+    const backT = new THREE.Matrix4();
+    backT.multiply(new THREE.Matrix4().makeTranslation(0, roomHeight / 2, -halfD));
+    addSurface(roomWidth, roomHeight, backT);
 
-      wallTransform.multiply(translateOut);
-      wallTransform.multiply(translateUp);
-      wallTransform.multiply(rotY);
-
-      const wallGeo = createTilingWallGeometry(
-        tilingType,
-        wallWidth,
-        roomHeight,
-        tileScale,
-        wallTransform,
-        baseHue,
-        saturation,
-        edgeCurvature,
-        tileRotation,
-      );
-      const wallMesh = new THREE.Mesh(wallGeo, material);
-      scene.add(wallMesh);
-      tiledMeshesRef.current.push(wallMesh);
-    }
-
-    renderer.render(scene, camera);
-  }, [tilingType, baseHue, roomRadius, roomHeight, tileScale, edgeCurvature, tileRotation, fogDensity, brightness, saturation]);
+    // Front wall
+    const frontT = new THREE.Matrix4();
+    frontT.multiply(new THREE.Matrix4().makeTranslation(0, roomHeight / 2, halfD));
+    frontT.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+    addSurface(roomWidth, roomHeight, frontT);
+  }, [tilingType, roomRadius, roomHeight, roomDepth, tileScale, edgeCurvature, tileRotation]);
 
   // Preview mode message handler
   useEffect(() => {
@@ -247,6 +338,25 @@ export default function ExpansiveRoom() {
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, [isPreview]);
+
+  // Cheap param handlers — update ref + display state
+  const onHueChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Number(e.target.value);
+    hueRef.current = v;
+    setHueDisplay(v);
+  }, []);
+
+  const onSaturationChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Number(e.target.value);
+    saturationRef.current = v;
+    setSaturationDisplay(v);
+  }, []);
+
+  const onBrightnessChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Number(e.target.value);
+    brightnessRef.current = v;
+    setBrightnessDisplay(v);
+  }, []);
 
   const sliderStyle = { width: "100%", cursor: "pointer" };
   const labelStyle: React.CSSProperties = {
@@ -308,15 +418,15 @@ export default function ExpansiveRoom() {
 
           <div style={blockStyle}>
             <label style={labelStyle}>
-              Hue: {baseHue.toFixed(2)}
+              Hue: {hueDisplay.toFixed(2)}
             </label>
             <input
               type="range"
               min="0"
               max="1"
               step="0.01"
-              value={baseHue}
-              onChange={(e) => setBaseHue(Number(e.target.value))}
+              value={hueDisplay}
+              onChange={onHueChange}
               style={sliderStyle}
             />
           </div>
@@ -398,45 +508,45 @@ export default function ExpansiveRoom() {
 
           <div style={blockStyle}>
             <label style={labelStyle}>
-              Fog Density: {fogDensity.toFixed(4)}
+              Room Depth: {roomDepth}
             </label>
             <input
               type="range"
-              min="0"
-              max="0.01"
-              step="0.0005"
-              value={fogDensity}
-              onChange={(e) => setFogDensity(Number(e.target.value))}
+              min="100"
+              max="4000"
+              step="50"
+              value={roomDepth}
+              onChange={(e) => setRoomDepth(Number(e.target.value))}
               style={sliderStyle}
             />
           </div>
 
           <div style={blockStyle}>
             <label style={labelStyle}>
-              Brightness: {brightness.toFixed(1)}
+              Brightness: {brightnessDisplay.toFixed(1)}
             </label>
             <input
               type="range"
               min="0.3"
               max="3"
               step="0.1"
-              value={brightness}
-              onChange={(e) => setBrightness(Number(e.target.value))}
+              value={brightnessDisplay}
+              onChange={onBrightnessChange}
               style={sliderStyle}
             />
           </div>
 
           <div style={blockStyle}>
             <label style={labelStyle}>
-              Saturation: {saturation.toFixed(2)}
+              Saturation: {saturationDisplay.toFixed(2)}
             </label>
             <input
               type="range"
               min="0"
               max="1"
               step="0.05"
-              value={saturation}
-              onChange={(e) => setSaturation(Number(e.target.value))}
+              value={saturationDisplay}
+              onChange={onSaturationChange}
               style={sliderStyle}
             />
           </div>
