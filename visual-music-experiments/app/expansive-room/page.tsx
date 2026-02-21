@@ -179,11 +179,15 @@ export default function ExpansiveRoom() {
     const roomGroup = new THREE.Group();
     roomGroupRef.current = roomGroup;
 
+    // roomWidth  = east-west span of center (= corridor width of N/S arms)
+    // roomDepth  = north-south span of center (= corridor width of E/W arms)
+    // Arms extend a fixed length beyond the center in each direction.
     const h = roomHeight;
-    const wingW = roomWidth;                  // corridor width (visible width of each arm)
-    const wingLenX = 100;                     // east/west arm length from center
-    const wingLenZ = roomDepth;               // north/south arm length from center
-    const halfWing = wingW / 2;
+    const cw = roomWidth;                     // center east-west span
+    const cd = roomDepth;                     // center north-south span
+    const armLen = 100;                       // how far each arm extends beyond center
+    const halfW = cw / 2;
+    const halfD = cd / 2;
     const floorY = 0;
     const ceilY = h;
     const midY = h / 2;
@@ -257,73 +261,73 @@ export default function ExpansiveRoom() {
     }
 
     // --- Floor (5 cross segments) ---
-    // Center
-    createPatternedWall(wingW, wingW,
+    // Center (cw x cd rectangle)
+    createPatternedWall(cw, cd,
       m4(0, floorY, 0, -Math.PI / 2, 0, 0), 0.6, 0.5);
-    // North
-    createPatternedWall(wingW, wingLenZ,
-      m4(0, floorY, -(halfWing + wingLenZ / 2), -Math.PI / 2, 0, 0), 0.6, 0.5);
-    // South
-    createPatternedWall(wingW, wingLenZ,
-      m4(0, floorY, (halfWing + wingLenZ / 2), -Math.PI / 2, 0, 0), 0.6, 0.5);
-    // East
-    createPatternedWall(wingLenX, wingW,
-      m4((halfWing + wingLenX / 2), floorY, 0, -Math.PI / 2, 0, 0), 0.6, 0.5);
-    // West
-    createPatternedWall(wingLenX, wingW,
-      m4(-(halfWing + wingLenX / 2), floorY, 0, -Math.PI / 2, 0, 0), 0.6, 0.5);
+    // North arm floor (cw wide, armLen deep)
+    createPatternedWall(cw, armLen,
+      m4(0, floorY, -(halfD + armLen / 2), -Math.PI / 2, 0, 0), 0.6, 0.5);
+    // South arm floor
+    createPatternedWall(cw, armLen,
+      m4(0, floorY, (halfD + armLen / 2), -Math.PI / 2, 0, 0), 0.6, 0.5);
+    // East arm floor (armLen wide, cd deep)
+    createPatternedWall(armLen, cd,
+      m4((halfW + armLen / 2), floorY, 0, -Math.PI / 2, 0, 0), 0.6, 0.5);
+    // West arm floor
+    createPatternedWall(armLen, cd,
+      m4(-(halfW + armLen / 2), floorY, 0, -Math.PI / 2, 0, 0), 0.6, 0.5);
 
     // --- Ceiling (5 cross segments) ---
-    createPatternedWall(wingW, wingW,
+    createPatternedWall(cw, cd,
       m4(0, ceilY, 0, Math.PI / 2, 0, 0), 0.7, 0.4);
-    createPatternedWall(wingW, wingLenZ,
-      m4(0, ceilY, -(halfWing + wingLenZ / 2), Math.PI / 2, 0, 0), 0.7, 0.4);
-    createPatternedWall(wingW, wingLenZ,
-      m4(0, ceilY, (halfWing + wingLenZ / 2), Math.PI / 2, 0, 0), 0.7, 0.4);
-    createPatternedWall(wingLenX, wingW,
-      m4((halfWing + wingLenX / 2), ceilY, 0, Math.PI / 2, 0, 0), 0.7, 0.4);
-    createPatternedWall(wingLenX, wingW,
-      m4(-(halfWing + wingLenX / 2), ceilY, 0, Math.PI / 2, 0, 0), 0.7, 0.4);
+    createPatternedWall(cw, armLen,
+      m4(0, ceilY, -(halfD + armLen / 2), Math.PI / 2, 0, 0), 0.7, 0.4);
+    createPatternedWall(cw, armLen,
+      m4(0, ceilY, (halfD + armLen / 2), Math.PI / 2, 0, 0), 0.7, 0.4);
+    createPatternedWall(armLen, cd,
+      m4((halfW + armLen / 2), ceilY, 0, Math.PI / 2, 0, 0), 0.7, 0.4);
+    createPatternedWall(armLen, cd,
+      m4(-(halfW + armLen / 2), ceilY, 0, Math.PI / 2, 0, 0), 0.7, 0.4);
 
     // --- Wing side walls ---
-    // North wing
-    const nCtr = -(halfWing + wingLenZ / 2);
-    createPatternedWall(wingLenZ, h, m4(-halfWing, midY, nCtr, 0, Math.PI / 2, 0), 0.55, 0.6);
-    createPatternedWall(wingLenZ, h, m4(halfWing, midY, nCtr, 0, -Math.PI / 2, 0), 0.55, 0.6);
-    // North end
-    createPatternedWall(wingW, h, m4(0, midY, -(halfWing + wingLenZ), 0, 0, 0), 0.5, 0.7);
+    // North wing (cw wide corridor extending in -Z)
+    const nCtr = -(halfD + armLen / 2);
+    createPatternedWall(armLen, h, m4(-halfW, midY, nCtr, 0, Math.PI / 2, 0), 0.55, 0.6);
+    createPatternedWall(armLen, h, m4(halfW, midY, nCtr, 0, -Math.PI / 2, 0), 0.55, 0.6);
+    // North end wall
+    createPatternedWall(cw, h, m4(0, midY, -(halfD + armLen), 0, 0, 0), 0.5, 0.7);
 
     // South wing
-    const sCtr = (halfWing + wingLenZ / 2);
-    createPatternedWall(wingLenZ, h, m4(-halfWing, midY, sCtr, 0, Math.PI / 2, 0), 0.55, 0.6);
-    createPatternedWall(wingLenZ, h, m4(halfWing, midY, sCtr, 0, -Math.PI / 2, 0), 0.55, 0.6);
-    createPatternedWall(wingW, h, m4(0, midY, (halfWing + wingLenZ), 0, Math.PI, 0), 0.5, 0.7);
+    const sCtr = (halfD + armLen / 2);
+    createPatternedWall(armLen, h, m4(-halfW, midY, sCtr, 0, Math.PI / 2, 0), 0.55, 0.6);
+    createPatternedWall(armLen, h, m4(halfW, midY, sCtr, 0, -Math.PI / 2, 0), 0.55, 0.6);
+    createPatternedWall(cw, h, m4(0, midY, (halfD + armLen), 0, Math.PI, 0), 0.5, 0.7);
 
-    // East wing
-    const eCtr = (halfWing + wingLenX / 2);
-    createPatternedWall(wingLenX, h, m4(eCtr, midY, -halfWing, 0, 0, 0), 0.0, 0.6);
-    createPatternedWall(wingLenX, h, m4(eCtr, midY, halfWing, 0, Math.PI, 0), 0.0, 0.6);
-    createPatternedWall(wingW, h, m4((halfWing + wingLenX), midY, 0, 0, -Math.PI / 2, 0), 0.05, 0.7);
+    // East wing (cd wide corridor extending in +X)
+    const eCtr = (halfW + armLen / 2);
+    createPatternedWall(armLen, h, m4(eCtr, midY, -halfD, 0, 0, 0), 0.0, 0.6);
+    createPatternedWall(armLen, h, m4(eCtr, midY, halfD, 0, Math.PI, 0), 0.0, 0.6);
+    createPatternedWall(cd, h, m4((halfW + armLen), midY, 0, 0, -Math.PI / 2, 0), 0.05, 0.7);
 
     // West wing
-    const wCtr = -(halfWing + wingLenX / 2);
-    createPatternedWall(wingLenX, h, m4(wCtr, midY, -halfWing, 0, 0, 0), 0.0, 0.6);
-    createPatternedWall(wingLenX, h, m4(wCtr, midY, halfWing, 0, Math.PI, 0), 0.0, 0.6);
-    createPatternedWall(wingW, h, m4(-(halfWing + wingLenX), midY, 0, 0, Math.PI / 2, 0), 0.05, 0.7);
+    const wCtr = -(halfW + armLen / 2);
+    createPatternedWall(armLen, h, m4(wCtr, midY, -halfD, 0, 0, 0), 0.0, 0.6);
+    createPatternedWall(armLen, h, m4(wCtr, midY, halfD, 0, Math.PI, 0), 0.0, 0.6);
+    createPatternedWall(cd, h, m4(-(halfW + armLen), midY, 0, 0, Math.PI / 2, 0), 0.05, 0.7);
 
     // --- Inner corner walls (8 segments filling cross junctions) ---
-    // NE
-    createPatternedWall(wingLenX, h, m4(halfWing + wingLenX / 2, midY, -halfWing, 0, 0, 0), 0.15, 0.5);
-    createPatternedWall(wingLenZ, h, m4(halfWing, midY, -(halfWing + wingLenZ / 2), 0, -Math.PI / 2, 0), 0.15, 0.5);
-    // NW
-    createPatternedWall(wingLenX, h, m4(-(halfWing + wingLenX / 2), midY, -halfWing, 0, 0, 0), 0.85, 0.5);
-    createPatternedWall(wingLenZ, h, m4(-halfWing, midY, -(halfWing + wingLenZ / 2), 0, Math.PI / 2, 0), 0.85, 0.5);
-    // SE
-    createPatternedWall(wingLenX, h, m4(halfWing + wingLenX / 2, midY, halfWing, 0, Math.PI, 0), 0.15, 0.5);
-    createPatternedWall(wingLenZ, h, m4(halfWing, midY, halfWing + wingLenZ / 2, 0, -Math.PI / 2, 0), 0.15, 0.5);
-    // SW
-    createPatternedWall(wingLenX, h, m4(-(halfWing + wingLenX / 2), midY, halfWing, 0, Math.PI, 0), 0.85, 0.5);
-    createPatternedWall(wingLenZ, h, m4(-halfWing, midY, halfWing + wingLenZ / 2, 0, Math.PI / 2, 0), 0.85, 0.5);
+    // NE corner
+    createPatternedWall(armLen, h, m4(halfW + armLen / 2, midY, -halfD, 0, 0, 0), 0.15, 0.5);
+    createPatternedWall(armLen, h, m4(halfW, midY, -(halfD + armLen / 2), 0, -Math.PI / 2, 0), 0.15, 0.5);
+    // NW corner
+    createPatternedWall(armLen, h, m4(-(halfW + armLen / 2), midY, -halfD, 0, 0, 0), 0.85, 0.5);
+    createPatternedWall(armLen, h, m4(-halfW, midY, -(halfD + armLen / 2), 0, Math.PI / 2, 0), 0.85, 0.5);
+    // SE corner
+    createPatternedWall(armLen, h, m4(halfW + armLen / 2, midY, halfD, 0, Math.PI, 0), 0.15, 0.5);
+    createPatternedWall(armLen, h, m4(halfW, midY, halfD + armLen / 2, 0, -Math.PI / 2, 0), 0.15, 0.5);
+    // SW corner
+    createPatternedWall(armLen, h, m4(-(halfW + armLen / 2), midY, halfD, 0, Math.PI, 0), 0.85, 0.5);
+    createPatternedWall(armLen, h, m4(-halfW, midY, halfD + armLen / 2, 0, Math.PI / 2, 0), 0.85, 0.5);
 
     scene.add(roomGroup);
     renderer.render(scene, camera);
