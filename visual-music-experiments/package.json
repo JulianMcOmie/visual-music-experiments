@@ -1,0 +1,30 @@
+{
+  "name": "circ",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@guinetik/penrose-js": "^0.0.1",
+    "@types/earcut": "^3.0.0",
+    "@types/three": "^0.182.0",
+    "earcut": "^3.0.2",
+    "next": "^16.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tactile-js": "^1.0.0",
+    "three": "^0.182.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "playwright": "^1.58.2",
+    "typescript": "^5"
+  }
+}
