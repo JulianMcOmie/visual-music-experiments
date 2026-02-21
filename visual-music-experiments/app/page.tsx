@@ -49,6 +49,14 @@ const projects = [
     bgColor: "#050505",
     snapshot: "/snapshots/penrose-tiling.png",
   },
+  {
+    title: "Expansive Room",
+    href: "/expansive-room",
+    description: "A vast cruciform cathedral covered in continuously morphing geometric tile patterns.",
+    color: "#8844ff",
+    bgColor: "#020208",
+    snapshot: "/snapshots/expansive-room.png",
+  },
 ];
 
 export default function Gallery() {
