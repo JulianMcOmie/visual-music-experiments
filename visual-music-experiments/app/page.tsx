@@ -60,7 +60,7 @@ const projects = [
   {
     title: "Expansive Room",
     href: "/expansive-room",
-    description: "A ginormous gothic cathedral with barrel vaults, colonnades, transepts, apse dome, rose window, and atmospheric fog.",
+    description: "A vast octagonal hall where every surface is covered in unique geometric tessellation patterns — pure visual awe through scale and pattern.",
     color: "#ffaa44",
     bgColor: "#020208",
     snapshot: "/snapshots/expansive-room.png",
