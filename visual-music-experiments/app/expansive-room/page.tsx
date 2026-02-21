@@ -113,8 +113,8 @@ export default function ExpansiveRoom() {
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-    camera.position.set(0, 5, 0);
-    camera.lookAt(0, 5, -50);
+    camera.position.set(0, 40, 0);
+    camera.lookAt(0, 40, -50);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -182,13 +182,17 @@ export default function ExpansiveRoom() {
     const w = roomWidth;
     const h = roomHeight;
     const d = roomDepth;
-    const wingW = Math.min(w, d) * 0.3;     // corridor width
-    const wingLenX = (w - wingW) / 2;        // east/west arm length
-    const wingLenZ = (d - wingW) / 2;        // north/south arm length
+    const wingW = 40;                         // fixed corridor width
+    const wingLenX = Math.max(10, (w - wingW) / 2);  // east/west arm length
+    const wingLenZ = Math.max(10, (d - wingW) / 2);  // north/south arm length
     const halfWing = wingW / 2;
     const floorY = 0;
     const ceilY = h;
     const midY = h / 2;
+
+    // Center camera vertically
+    camera.position.set(0, midY, 0);
+    camera.lookAt(0, midY, -50);
 
     const tileSize = 3;
     const tileGeo = createTileGeometry(shapeValue, tileSize * 0.42);
