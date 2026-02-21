@@ -4,19 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { createTilingWallGeometry } from "./tiling-geometry";
 
-// 10 visually distinct tiling type indices (out of 0–80)
-const DEFAULT_TILINGS = [
-  3,   // floor
-  12,  // ceiling
-  7,   // wall 0
-  19,  // wall 1
-  28,  // wall 2
-  35,  // wall 3
-  44,  // wall 4
-  52,  // wall 5
-  61,  // wall 6
-  73,  // wall 7
-];
 
 export default function ExpansiveRoom() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -24,10 +11,13 @@ export default function ExpansiveRoom() {
   const [showControls, setShowControls] = useState(true);
 
   // Parameters
+  const [tilingType, setTilingType] = useState(3);
+  const [baseHue, setBaseHue] = useState(0.58);
   const [roomRadius, setRoomRadius] = useState(200);
   const [roomHeight, setRoomHeight] = useState(200);
   const [tileScale, setTileScale] = useState(8);
   const [edgeCurvature, setEdgeCurvature] = useState(0.5);
+  const [tileRotation, setTileRotation] = useState(0);
   const [fogDensity, setFogDensity] = useState(0.003);
   const [brightness, setBrightness] = useState(1.2);
   const [saturation, setSaturation] = useState(0.55);
@@ -170,7 +160,7 @@ export default function ExpansiveRoom() {
       lightsRef.current.push(fl);
     }
 
-    // Build octagonal room
+    // Build octagonal room — same tiling type and hue on every surface
     const numWalls = 8;
     const angleStep = (Math.PI * 2) / numWalls;
     const wallWidth = 2 * roomRadius * Math.tan(angleStep / 2);
@@ -179,14 +169,15 @@ export default function ExpansiveRoom() {
     const floorTransform = new THREE.Matrix4();
     floorTransform.makeRotationX(-Math.PI / 2);
     const floorGeo = createTilingWallGeometry(
-      DEFAULT_TILINGS[0],
+      tilingType,
       roomRadius * 2.5,
       roomRadius * 2.5,
       tileScale,
       floorTransform,
-      0.58,
+      baseHue,
       saturation,
       edgeCurvature,
+      tileRotation,
     );
     const floorMesh = new THREE.Mesh(floorGeo, material);
     scene.add(floorMesh);
@@ -198,14 +189,15 @@ export default function ExpansiveRoom() {
     const ceilingTranslate = new THREE.Matrix4().makeTranslation(0, roomHeight, 0);
     ceilingTransform.premultiply(ceilingTranslate);
     const ceilingGeo = createTilingWallGeometry(
-      DEFAULT_TILINGS[1],
+      tilingType,
       roomRadius * 2.5,
       roomRadius * 2.5,
       tileScale,
       ceilingTransform,
-      0.08,
+      baseHue,
       saturation,
       edgeCurvature,
+      tileRotation,
     );
     const ceilingMesh = new THREE.Mesh(ceilingGeo, material);
     scene.add(ceilingMesh);
@@ -214,7 +206,6 @@ export default function ExpansiveRoom() {
     // 8 Walls
     for (let i = 0; i < numWalls; i++) {
       const angle = i * angleStep;
-      const hue = i / numWalls;
 
       const cx = Math.sin(angle) * roomRadius;
       const cz = Math.cos(angle) * roomRadius;
@@ -229,14 +220,15 @@ export default function ExpansiveRoom() {
       wallTransform.multiply(rotY);
 
       const wallGeo = createTilingWallGeometry(
-        DEFAULT_TILINGS[2 + i],
+        tilingType,
         wallWidth,
         roomHeight,
         tileScale,
         wallTransform,
-        hue,
+        baseHue,
         saturation,
         edgeCurvature,
+        tileRotation,
       );
       const wallMesh = new THREE.Mesh(wallGeo, material);
       scene.add(wallMesh);
@@ -244,7 +236,7 @@ export default function ExpansiveRoom() {
     }
 
     renderer.render(scene, camera);
-  }, [roomRadius, roomHeight, tileScale, edgeCurvature, fogDensity, brightness, saturation]);
+  }, [tilingType, baseHue, roomRadius, roomHeight, tileScale, edgeCurvature, tileRotation, fogDensity, brightness, saturation]);
 
   // Preview mode message handler
   useEffect(() => {
@@ -297,6 +289,36 @@ export default function ExpansiveRoom() {
             <h2 style={{ margin: "8px 0 0 0", fontSize: "18px", color: "#fff" }}>
               Expansive Room
             </h2>
+          </div>
+
+          <div style={blockStyle}>
+            <label style={labelStyle}>
+              Tiling Type: {tilingType}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="80"
+              step="1"
+              value={tilingType}
+              onChange={(e) => setTilingType(Number(e.target.value))}
+              style={sliderStyle}
+            />
+          </div>
+
+          <div style={blockStyle}>
+            <label style={labelStyle}>
+              Hue: {baseHue.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={baseHue}
+              onChange={(e) => setBaseHue(Number(e.target.value))}
+              style={sliderStyle}
+            />
           </div>
 
           <div style={blockStyle}>
@@ -355,6 +377,21 @@ export default function ExpansiveRoom() {
               step="0.05"
               value={edgeCurvature}
               onChange={(e) => setEdgeCurvature(Number(e.target.value))}
+              style={sliderStyle}
+            />
+          </div>
+
+          <div style={blockStyle}>
+            <label style={labelStyle}>
+              Tile Rotation: {Math.round(tileRotation * 180 / Math.PI)}&deg;
+            </label>
+            <input
+              type="range"
+              min={-Math.PI}
+              max={Math.PI}
+              step="0.01"
+              value={tileRotation}
+              onChange={(e) => setTileRotation(Number(e.target.value))}
               style={sliderStyle}
             />
           </div>

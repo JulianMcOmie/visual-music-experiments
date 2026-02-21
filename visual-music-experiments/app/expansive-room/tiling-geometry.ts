@@ -129,6 +129,7 @@ export function createTilingWallGeometry(
   hueBase: number,
   saturation: number,
   edgeCurvature: number = 0.5,
+  tileRotation: number = 0,
 ): THREE.BufferGeometry {
   const clampedIdx = Math.max(0, Math.min(80, tilingTypeIndex));
   const typeId = tilingTypes[clampedIdx];
@@ -140,7 +141,21 @@ export function createTilingWallGeometry(
     tiling.setParameters(params);
   }
 
-  const outline = buildPrototileOutline(tiling, edgeCurvature);
+  let outline = buildPrototileOutline(tiling, edgeCurvature);
+
+  // Rotate prototile vertices around their centroid
+  if (Math.abs(tileRotation) > 0.001) {
+    const cx = outline.reduce((s, p) => s + p.x, 0) / outline.length;
+    const cy = outline.reduce((s, p) => s + p.y, 0) / outline.length;
+    const cos = Math.cos(tileRotation);
+    const sin = Math.sin(tileRotation);
+    outline = outline.map((p) => {
+      const dx = p.x - cx;
+      const dy = p.y - cy;
+      return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+    });
+  }
+
   const { positions: protoFlat, indices: protoIndices } = triangulateTile(outline);
 
   const vertsPerTile = outline.length;
