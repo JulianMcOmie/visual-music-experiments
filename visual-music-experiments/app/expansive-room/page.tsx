@@ -70,9 +70,9 @@ function getShapeLabel(v: number): string {
 export default function ExpansiveRoom() {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [roomWidth, setRoomWidth] = useState(200);
+  const [roomWidth, setRoomWidth] = useState(40);
   const [roomHeight, setRoomHeight] = useState(80);
-  const [roomDepth, setRoomDepth] = useState(200);
+  const [roomDepth, setRoomDepth] = useState(100);
   const [shapeValue, setShapeValue] = useState(0);
 
   const [showControls, setShowControls] = useState(true);
@@ -179,12 +179,10 @@ export default function ExpansiveRoom() {
     const roomGroup = new THREE.Group();
     roomGroupRef.current = roomGroup;
 
-    const w = roomWidth;
     const h = roomHeight;
-    const d = roomDepth;
-    const wingW = 40;                         // fixed corridor width
-    const wingLenX = Math.max(10, (w - wingW) / 2);  // east/west arm length
-    const wingLenZ = Math.max(10, (d - wingW) / 2);  // north/south arm length
+    const wingW = roomWidth;                  // corridor width (visible width of each arm)
+    const wingLenX = 100;                     // east/west arm length from center
+    const wingLenZ = roomDepth;               // north/south arm length from center
     const halfWing = wingW / 2;
     const floorY = 0;
     const ceilY = h;
@@ -369,7 +367,7 @@ export default function ExpansiveRoom() {
 
         <div style={blockStyle}>
           <label style={labelStyle}>Room Width: {roomWidth}</label>
-          <input type="range" min="60" max="500" step="10" value={roomWidth}
+          <input type="range" min="10" max="200" step="5" value={roomWidth}
             onChange={(e) => setRoomWidth(Number(e.target.value))} style={sliderStyle} />
         </div>
 
@@ -381,7 +379,7 @@ export default function ExpansiveRoom() {
 
         <div style={blockStyle}>
           <label style={labelStyle}>Room Depth: {roomDepth}</label>
-          <input type="range" min="60" max="500" step="10" value={roomDepth}
+          <input type="range" min="20" max="500" step="10" value={roomDepth}
             onChange={(e) => setRoomDepth(Number(e.target.value))} style={sliderStyle} />
         </div>
       </div>
