@@ -240,7 +240,7 @@ export default function ExpansiveRoom() {
   const [tileScale, setTileScale] = useState(8);
   const [edgeCurvature, setEdgeCurvature] = useState(0.5);
   const [tileRotation, setTileRotation] = useState(0);
-  const [roomDepth, setRoomDepth] = useState(500);
+  const [roomSides, setRoomSides] = useState(4);
 
   // Cheap params (uniform-driven) — refs for instant updates, state for UI display
   const hueRef = useRef(0.58);
@@ -257,12 +257,12 @@ export default function ExpansiveRoom() {
   const [hueOscMin, setHueOscMin] = useState(0);
   const [hueOscMax, setHueOscMax] = useState(1);
 
-  // Oscillator state — roomDepth (expensive)
-  const [roomDepthOscEnabled, setRoomDepthOscEnabled] = useState(false);
-  const [roomDepthOscFunction, setRoomDepthOscFunction] = useState<WaveFunction>("sin");
-  const [roomDepthOscSpeed, setRoomDepthOscSpeed] = useState(0.3);
-  const [roomDepthOscMin, setRoomDepthOscMin] = useState(100);
-  const [roomDepthOscMax, setRoomDepthOscMax] = useState(2000);
+  // Oscillator state — roomSides (expensive)
+  const [roomSidesOscEnabled, setRoomSidesOscEnabled] = useState(false);
+  const [roomSidesOscFunction, setRoomSidesOscFunction] = useState<WaveFunction>("sin");
+  const [roomSidesOscSpeed, setRoomSidesOscSpeed] = useState(0.3);
+  const [roomSidesOscMin, setRoomSidesOscMin] = useState(3);
+  const [roomSidesOscMax, setRoomSidesOscMax] = useState(12);
 
   // Oscillator state — tileRotation (expensive)
   const [tileRotationOscEnabled, setTileRotationOscEnabled] = useState(false);
@@ -310,11 +310,11 @@ export default function ExpansiveRoom() {
   const hueOscMinRef = useRef(0);
   const hueOscMaxRef = useRef(1);
 
-  const roomDepthOscEnabledRef = useRef(false);
-  const roomDepthOscFunctionRef = useRef<WaveFunction>("sin");
-  const roomDepthOscSpeedRef = useRef(0.3);
-  const roomDepthOscMinRef = useRef(100);
-  const roomDepthOscMaxRef = useRef(2000);
+  const roomSidesOscEnabledRef = useRef(false);
+  const roomSidesOscFunctionRef = useRef<WaveFunction>("sin");
+  const roomSidesOscSpeedRef = useRef(0.3);
+  const roomSidesOscMinRef = useRef(3);
+  const roomSidesOscMaxRef = useRef(12);
 
   const tileRotationOscEnabledRef = useRef(false);
   const tileRotationOscFunctionRef = useRef<WaveFunction>("triangle");
@@ -356,11 +356,11 @@ export default function ExpansiveRoom() {
   useEffect(() => { hueOscMinRef.current = hueOscMin; }, [hueOscMin]);
   useEffect(() => { hueOscMaxRef.current = hueOscMax; }, [hueOscMax]);
 
-  useEffect(() => { roomDepthOscEnabledRef.current = roomDepthOscEnabled; }, [roomDepthOscEnabled]);
-  useEffect(() => { roomDepthOscFunctionRef.current = roomDepthOscFunction; }, [roomDepthOscFunction]);
-  useEffect(() => { roomDepthOscSpeedRef.current = roomDepthOscSpeed; }, [roomDepthOscSpeed]);
-  useEffect(() => { roomDepthOscMinRef.current = roomDepthOscMin; }, [roomDepthOscMin]);
-  useEffect(() => { roomDepthOscMaxRef.current = roomDepthOscMax; }, [roomDepthOscMax]);
+  useEffect(() => { roomSidesOscEnabledRef.current = roomSidesOscEnabled; }, [roomSidesOscEnabled]);
+  useEffect(() => { roomSidesOscFunctionRef.current = roomSidesOscFunction; }, [roomSidesOscFunction]);
+  useEffect(() => { roomSidesOscSpeedRef.current = roomSidesOscSpeed; }, [roomSidesOscSpeed]);
+  useEffect(() => { roomSidesOscMinRef.current = roomSidesOscMin; }, [roomSidesOscMin]);
+  useEffect(() => { roomSidesOscMaxRef.current = roomSidesOscMax; }, [roomSidesOscMax]);
 
   useEffect(() => { tileRotationOscEnabledRef.current = tileRotationOscEnabled; }, [tileRotationOscEnabled]);
   useEffect(() => { tileRotationOscFunctionRef.current = tileRotationOscFunction; }, [tileRotationOscFunction]);
@@ -399,7 +399,7 @@ export default function ExpansiveRoom() {
   useEffect(() => { tileScaleBaseRef.current = tileScale; }, [tileScale]);
   useEffect(() => { edgeCurvatureBaseRef.current = edgeCurvature; }, [edgeCurvature]);
   useEffect(() => { tileRotationBaseRef.current = tileRotation; }, [tileRotation]);
-  useEffect(() => { roomDepthBaseRef.current = roomDepth; }, [roomDepth]);
+  useEffect(() => { roomSidesBaseRef.current = roomSides; }, [roomSides]);
 
   // Base-value refs for expensive params (synced from slider state, used when oscillator is off)
   const tilingTypeBaseRef = useRef(3);
@@ -408,12 +408,12 @@ export default function ExpansiveRoom() {
   const tileScaleBaseRef = useRef(8);
   const edgeCurvatureBaseRef = useRef(0.5);
   const tileRotationBaseRef = useRef(0);
-  const roomDepthBaseRef = useRef(500);
+  const roomSidesBaseRef = useRef(4);
 
   // Last-rendered values (to detect when rebuild is actually needed)
   const lastRenderedRef = useRef({
     tilingType: 3, roomRadius: 260, roomHeight: 220,
-    tileScale: 8, edgeCurvature: 0.5, roomDepth: 500,
+    tileScale: 8, edgeCurvature: 0.5, roomSides: 4,
   });
 
   // Refs for Three.js objects
@@ -426,7 +426,7 @@ export default function ExpansiveRoom() {
   const rafRef = useRef<number>(0);
   const timeRef = useRef(0);
   const lastRebuildRef = useRef(0);
-  const rebuildFnRef = useRef<((tiling: number, radius: number, height: number, scale: number, curvature: number, depth: number) => void) | null>(null);
+  const rebuildFnRef = useRef<((tiling: number, radius: number, height: number, scale: number, curvature: number, sides: number) => void) | null>(null);
 
   useEffect(() => {
     if (window.location.search.includes("preview")) {
@@ -512,15 +512,15 @@ export default function ExpansiveRoom() {
         const effRoomRadius = getOsc(roomRadiusOscEnabledRef.current, roomRadiusBaseRef.current, roomRadiusOscFunctionRef.current, roomRadiusOscSpeedRef.current, roomRadiusOscMinRef.current, roomRadiusOscMaxRef.current, true);
         const effRoomHeight = getOsc(roomHeightOscEnabledRef.current, roomHeightBaseRef.current, roomHeightOscFunctionRef.current, roomHeightOscSpeedRef.current, roomHeightOscMinRef.current, roomHeightOscMaxRef.current, true);
         const effTileScale = getOsc(tileScaleOscEnabledRef.current, tileScaleBaseRef.current, tileScaleOscFunctionRef.current, tileScaleOscSpeedRef.current, tileScaleOscMinRef.current, tileScaleOscMaxRef.current, false);
-        const effRoomDepth = getOsc(roomDepthOscEnabledRef.current, roomDepthBaseRef.current, roomDepthOscFunctionRef.current, roomDepthOscSpeedRef.current, roomDepthOscMinRef.current, roomDepthOscMaxRef.current, true);
+        const effRoomSides = getOsc(roomSidesOscEnabledRef.current, roomSidesBaseRef.current, roomSidesOscFunctionRef.current, roomSidesOscSpeedRef.current, roomSidesOscMinRef.current, roomSidesOscMaxRef.current, true);
         const effEdgeCurvature = edgeCurvatureBaseRef.current;
 
         const last = lastRenderedRef.current;
         if (effTilingType !== last.tilingType || effRoomRadius !== last.roomRadius ||
             effRoomHeight !== last.roomHeight || effTileScale !== last.tileScale ||
             effEdgeCurvature !== last.edgeCurvature ||
-            effRoomDepth !== last.roomDepth) {
-          rebuildFnRef.current?.(effTilingType, effRoomRadius, effRoomHeight, effTileScale, effEdgeCurvature, effRoomDepth);
+            effRoomSides !== last.roomSides) {
+          rebuildFnRef.current?.(effTilingType, effRoomRadius, effRoomHeight, effTileScale, effEdgeCurvature, effRoomSides);
           lastRebuildRef.current = now;
         }
       }
@@ -559,7 +559,7 @@ export default function ExpansiveRoom() {
   // Rebuild geometry function — called from animation loop, reads explicit params
   const doRebuild = useCallback((
     pTilingType: number, pRoomRadius: number, pRoomHeight: number,
-    pTileScale: number, pEdgeCurvature: number, pRoomDepth: number,
+    pTileScale: number, pEdgeCurvature: number, pRoomSides: number,
   ) => {
     const scene = sceneRef.current;
     const material = materialRef.current;
@@ -580,6 +580,11 @@ export default function ExpansiveRoom() {
 
     scene.fog = null;
 
+    // Polygon geometry
+    const N = Math.max(3, Math.round(pRoomSides));
+    const chordLen = 2 * pRoomRadius * Math.sin(Math.PI / N);
+    const apothem = pRoomRadius * Math.cos(Math.PI / N);
+
     // Lighting
     const ambient = new THREE.AmbientLight(0x667799, 1.0);
     scene.add(ambient);
@@ -589,37 +594,30 @@ export default function ExpansiveRoom() {
     scene.add(hemiLight);
     lightsRef.current.push(hemiLight);
 
-    const maxDim = Math.max(pRoomRadius, pRoomDepth);
-    const centralLight = new THREE.PointLight(0xffeedd, 3, maxDim * 3, 1.2);
+    const centralLight = new THREE.PointLight(0xffeedd, 3, pRoomRadius * 3, 1.2);
     centralLight.position.set(0, pRoomHeight * 0.85, 0);
     scene.add(centralLight);
     lightsRef.current.push(centralLight);
 
-    const numLightsZ = Math.max(3, Math.ceil(pRoomDepth / 200));
-    for (let zi = 0; zi < numLightsZ; zi++) {
-      const zPos = -pRoomDepth / 2 + (zi + 0.5) * (pRoomDepth / numLightsZ);
-      for (let ai = 0; ai < 4; ai++) {
-        const a = (ai / 4) * Math.PI * 2;
-        const pl = new THREE.PointLight(0xddeeff, 1.5, maxDim * 2, 1.5);
-        pl.position.set(Math.sin(a) * pRoomRadius * 0.5, pRoomHeight * 0.4, zPos + Math.cos(a) * pRoomRadius * 0.5);
-        scene.add(pl);
-        lightsRef.current.push(pl);
-      }
+    // Distribute point lights around the polygon
+    for (let i = 0; i < N; i++) {
+      const angle = (i / N) * Math.PI * 2;
+      const pl = new THREE.PointLight(0xddeeff, 1.5, pRoomRadius * 2, 1.5);
+      pl.position.set(
+        Math.sin(angle) * apothem * 0.5,
+        pRoomHeight * 0.4,
+        -Math.cos(angle) * apothem * 0.5,
+      );
+      scene.add(pl);
+      lightsRef.current.push(pl);
     }
 
-    const fillZPositions = [0, -pRoomDepth * 0.3, pRoomDepth * 0.3];
-    for (const fz of fillZPositions) {
-      const fl = new THREE.PointLight(0xccbbaa, 0.8, maxDim * 2, 1.8);
-      fl.position.set(0, pRoomHeight * 0.15, fz);
-      scene.add(fl);
-      lightsRef.current.push(fl);
-    }
+    const fl = new THREE.PointLight(0xccbbaa, 0.8, pRoomRadius * 2, 1.8);
+    fl.position.set(0, pRoomHeight * 0.15, 0);
+    scene.add(fl);
+    lightsRef.current.push(fl);
 
-    // Build rectangular hall
-    const roomWidth = pRoomRadius * 2;
-    const halfW = roomWidth / 2;
-    const halfD = pRoomDepth / 2;
-
+    // Helper to add a tiled surface
     const addSurface = (w: number, h: number, transform: THREE.Matrix4) => {
       const geo = createTilingWallGeometry(
         pTilingType, w, h, pTileScale, transform,
@@ -630,48 +628,44 @@ export default function ExpansiveRoom() {
       tiledMeshesRef.current.push(mesh);
     };
 
-    // Floor
+    // Floor (oversized plane to cover polygon footprint)
+    const floorSize = pRoomRadius * 2.5;
     const floorT = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
-    addSurface(roomWidth, pRoomDepth, floorT);
+    addSurface(floorSize, floorSize, floorT);
 
     // Ceiling
     const ceilT = new THREE.Matrix4();
     ceilT.multiply(new THREE.Matrix4().makeTranslation(0, pRoomHeight, 0));
     ceilT.multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2));
-    addSurface(roomWidth, pRoomDepth, ceilT);
+    addSurface(floorSize, floorSize, ceilT);
 
-    // Left wall
-    const leftT = new THREE.Matrix4();
-    leftT.multiply(new THREE.Matrix4().makeTranslation(-halfW, pRoomHeight / 2, 0));
-    leftT.multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2));
-    addSurface(pRoomDepth, pRoomHeight, leftT);
-
-    // Right wall
-    const rightT = new THREE.Matrix4();
-    rightT.multiply(new THREE.Matrix4().makeTranslation(halfW, pRoomHeight / 2, 0));
-    rightT.multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 2));
-    addSurface(pRoomDepth, pRoomHeight, rightT);
-
-    // Back wall
-    const backT = new THREE.Matrix4();
-    backT.multiply(new THREE.Matrix4().makeTranslation(0, pRoomHeight / 2, -halfD));
-    addSurface(roomWidth, pRoomHeight, backT);
-
-    // Front wall
-    const frontT = new THREE.Matrix4();
-    frontT.multiply(new THREE.Matrix4().makeTranslation(0, pRoomHeight / 2, halfD));
-    frontT.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
-    addSurface(roomWidth, pRoomHeight, frontT);
+    // N walls arranged as a regular polygon
+    for (let i = 0; i < N; i++) {
+      const angle = (i / N) * Math.PI * 2;
+      const cx = Math.sin(angle) * apothem;
+      const cz = -Math.cos(angle) * apothem;
+      const wallT = new THREE.Matrix4();
+      wallT.multiply(new THREE.Matrix4().makeTranslation(cx, pRoomHeight / 2, cz));
+      wallT.multiply(new THREE.Matrix4().makeRotationY(-angle));
+      addSurface(chordLen, pRoomHeight, wallT);
+    }
 
     // Track what we rendered
     lastRenderedRef.current = {
       tilingType: pTilingType, roomRadius: pRoomRadius, roomHeight: pRoomHeight,
-      tileScale: pTileScale, edgeCurvature: pEdgeCurvature, roomDepth: pRoomDepth,
+      tileScale: pTileScale, edgeCurvature: pEdgeCurvature, roomSides: N,
     };
 
-    // Update focal point to back wall center
+    // Update focal point to center of wall 0 (faces camera at -Z)
     if (material.uniforms.uFocalPoint) {
-      material.uniforms.uFocalPoint.value.set(0, pRoomHeight / 2, -pRoomDepth / 2);
+      material.uniforms.uFocalPoint.value.set(0, pRoomHeight / 2, -apothem);
+    }
+
+    // Adjust camera Z so it stays inside the room
+    if (cameraRef.current) {
+      const cam = cameraRef.current;
+      cam.position.set(0, 70, Math.min(100, apothem * 0.6));
+      cam.lookAt(0, 70, -apothem);
     }
   }, []);
 
@@ -680,8 +674,8 @@ export default function ExpansiveRoom() {
 
   // Rebuild when slider state changes (manual user interaction)
   useEffect(() => {
-    doRebuild(tilingType, roomRadius, roomHeight, tileScale, edgeCurvature, roomDepth);
-  }, [tilingType, roomRadius, roomHeight, roomDepth, tileScale, edgeCurvature, doRebuild]);
+    doRebuild(tilingType, roomRadius, roomHeight, tileScale, edgeCurvature, roomSides);
+  }, [tilingType, roomRadius, roomHeight, roomSides, tileScale, edgeCurvature, doRebuild]);
 
   // Preview mode message handler
   useEffect(() => {
@@ -714,7 +708,7 @@ export default function ExpansiveRoom() {
 
   const clearAllOscillators = useCallback(() => {
     setHueOscEnabled(false);
-    setRoomDepthOscEnabled(false);
+    setRoomSidesOscEnabled(false);
     setTileRotationOscEnabled(false);
     setTileScaleOscEnabled(false);
     setRoomHeightOscEnabled(false);
@@ -798,8 +792,8 @@ export default function ExpansiveRoom() {
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>Room Depth: {roomDepth}</label>
-            <input type="range" min="100" max="4000" step="50" value={roomDepth} onChange={(e) => setRoomDepth(Number(e.target.value))} style={{ width: "100%" }} />
+            <label style={labelStyle}>Room Sides: {roomSides}</label>
+            <input type="range" min="3" max="12" step="1" value={roomSides} onChange={(e) => setRoomSides(Number(e.target.value))} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
@@ -1051,33 +1045,33 @@ export default function ExpansiveRoom() {
               </div>
             </details>
 
-            {/* Room Depth Oscillator */}
+            {/* Room Sides Oscillator */}
             <details style={oscDetStyle}>
               <summary style={oscSumStyle}>
-                Room Depth Oscillator {roomDepthOscEnabled ? "\u2713" : ""}
+                Room Sides Oscillator {roomSidesOscEnabled ? "\u2713" : ""}
               </summary>
               <div style={oscBodyStyle}>
                 <label style={oscCheckStyle}>
-                  <input type="checkbox" checked={roomDepthOscEnabled} onChange={(e) => setRoomDepthOscEnabled(e.target.checked)} />
+                  <input type="checkbox" checked={roomSidesOscEnabled} onChange={(e) => setRoomSidesOscEnabled(e.target.checked)} />
                   {" "}Enabled
                 </label>
                 <label style={oscLblStyle}>
                   Function:
-                  <select value={roomDepthOscFunction} onChange={(e) => setRoomDepthOscFunction(e.target.value as WaveFunction)} style={oscSelectStyle}>
+                  <select value={roomSidesOscFunction} onChange={(e) => setRoomSidesOscFunction(e.target.value as WaveFunction)} style={oscSelectStyle}>
                     {waveOptions}
                   </select>
                 </label>
                 <label style={oscLblStyle}>
-                  Speed: {roomDepthOscSpeed.toFixed(2)}
-                  <input type="range" min="0.05" max="3" step="0.05" value={roomDepthOscSpeed} onChange={(e) => setRoomDepthOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  Speed: {roomSidesOscSpeed.toFixed(2)}
+                  <input type="range" min="0.05" max="3" step="0.05" value={roomSidesOscSpeed} onChange={(e) => setRoomSidesOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={oscLblStyle}>
-                  Min: {roomDepthOscMin}
-                  <input type="range" min="100" max="4000" step="50" value={roomDepthOscMin} onChange={(e) => setRoomDepthOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  Min: {roomSidesOscMin}
+                  <input type="range" min="3" max="12" step="1" value={roomSidesOscMin} onChange={(e) => setRoomSidesOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
                 <label style={{ display: "block", fontSize: "12px" }}>
-                  Max: {roomDepthOscMax}
-                  <input type="range" min="100" max="4000" step="50" value={roomDepthOscMax} onChange={(e) => setRoomDepthOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                  Max: {roomSidesOscMax}
+                  <input type="range" min="3" max="12" step="1" value={roomSidesOscMax} onChange={(e) => setRoomSidesOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
                 </label>
               </div>
             </details>
