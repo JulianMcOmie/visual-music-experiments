@@ -15,6 +15,11 @@ const waveFunctions: Record<WaveFunction, (x: number) => number> = {
   triangle: (x) => 2 * Math.abs(2 * ((x / (2 * Math.PI)) - Math.floor((x / (2 * Math.PI)) + 0.5))) - 1,
 };
 
+// Wave function index mapping
+const waveToIndex: Record<WaveFunction, number> = {
+  sin: 0, cos: 1, "abs-sin": 2, square: 3, sawtooth: 4, triangle: 5,
+};
+
 // HSL-to-RGB shader function + tile coloring with lighting
 const vertexShader = /* glsl */ `
   #include <common>
@@ -24,9 +29,47 @@ const vertexShader = /* glsl */ `
   attribute vec3 tileCentroid;
   uniform float uTileRotation;
 
+  // Time delay uniforms
+  uniform float uTime;
+  uniform float uTimeDelay;
+  uniform vec3 uFocalPoint;
+
+  // Tile rotation oscillator uniforms
+  uniform bool uTileRotOscEnabled;
+  uniform int uTileRotOscFunction;
+  uniform float uTileRotOscSpeed;
+  uniform float uTileRotOscMin;
+  uniform float uTileRotOscMax;
+  uniform float uTileRotBase;
+
+  // Hue oscillator uniforms
+  uniform bool uHueOscEnabled;
+  uniform int uHueOscFunction;
+  uniform float uHueOscSpeed;
+  uniform float uHueOscMin;
+  uniform float uHueOscMax;
+
   varying vec3 vColor;
   varying vec3 vNormal;
   varying vec3 vViewPosition;
+  varying float vTileHue;
+
+  // GLSL wave functions: returns value in [-1, 1]
+  float waveFunc(int fn, float x) {
+    if (fn == 0) return sin(x);           // sin
+    if (fn == 1) return cos(x);           // cos
+    if (fn == 2) return abs(sin(x));      // abs-sin (0 to 1, remapped below)
+    if (fn == 3) return sin(x) >= 0.0 ? 1.0 : -1.0; // square
+    if (fn == 4) return 2.0 * fract(x / 6.28318) - 1.0; // sawtooth
+    // triangle
+    return 2.0 * abs(2.0 * fract(x / 6.28318) - 1.0) - 1.0;
+  }
+
+  // Normalized wave: returns value in [0, 1]
+  float waveNorm(int fn, float x) {
+    if (fn == 2) return abs(sin(x)); // abs-sin already 0..1
+    return (waveFunc(fn, x) + 1.0) / 2.0;
+  }
 
   // Rodrigues rotation: rotate v around unit axis k by angle a
   vec3 rotateAxis(vec3 v, vec3 k, float a) {
@@ -38,12 +81,30 @@ const vertexShader = /* glsl */ `
   void main() {
     vColor = color;
 
+    // Per-tile distance from focal point for phase offset
+    float dist = length(tileCentroid - uFocalPoint);
+    float phaseOffset = dist * uTimeDelay;
+
+    // Tile rotation: use shader oscillator or base value
+    float tileRot = uTileRotBase;
+    if (uTileRotOscEnabled) {
+      float norm = waveNorm(uTileRotOscFunction, uTime * uTileRotOscSpeed - phaseOffset);
+      tileRot = uTileRotOscMin + norm * (uTileRotOscMax - uTileRotOscMin);
+    }
+
+    // Hue oscillator: compute per-tile hue
+    vTileHue = -1.0; // sentinel: no override
+    if (uHueOscEnabled) {
+      float norm = waveNorm(uHueOscFunction, uTime * uHueOscSpeed - phaseOffset);
+      vTileHue = uHueOscMin + norm * (uHueOscMax - uHueOscMin);
+    }
+
     // Rotate each tile's vertices around its centroid, along the surface normal
     vec3 pos = position;
-    if (abs(uTileRotation) > 0.001) {
+    if (abs(tileRot) > 0.001) {
       vec3 offset = position - tileCentroid;
       vec3 axis = normalize(normal);
-      pos = tileCentroid + rotateAxis(offset, axis, uTileRotation);
+      pos = tileCentroid + rotateAxis(offset, axis, tileRot);
     }
 
     vec3 transformedNormal = normalMatrix * normal;
@@ -65,6 +126,7 @@ const fragmentShader = /* glsl */ `
   varying vec3 vColor;
   varying vec3 vNormal;
   varying vec3 vViewPosition;
+  varying float vTileHue;
 
   // Standard HSL to RGB conversion
   vec3 hsl2rgb(float h, float s, float l) {
@@ -87,8 +149,9 @@ const fragmentShader = /* glsl */ `
     float aspectFraction = vColor.r;
     float lightness = vColor.g;
 
-    // Compute final hue from uniform + per-tile offset (tight analogous spread)
-    float hue = fract(uHue + aspectFraction * 0.08);
+    // Use per-tile hue from oscillator if active, otherwise uniform
+    float baseHue = vTileHue >= 0.0 ? vTileHue : uHue;
+    float hue = fract(baseHue + aspectFraction * 0.08);
     vec3 baseColor = hsl2rgb(hue, uSaturation, lightness);
 
     // Simple lighting using Three.js light data
@@ -140,6 +203,23 @@ function createTileMaterial(hue: number, saturation: number): THREE.ShaderMateri
       uHue: { value: hue },
       uSaturation: { value: saturation },
       uTileRotation: { value: 0 },
+      // Time delay
+      uTime: { value: 0 },
+      uTimeDelay: { value: 0 },
+      uFocalPoint: { value: new THREE.Vector3(0, 110, -250) },
+      // Tile rotation oscillator
+      uTileRotOscEnabled: { value: false },
+      uTileRotOscFunction: { value: 5 }, // triangle
+      uTileRotOscSpeed: { value: 0.5 },
+      uTileRotOscMin: { value: -Math.PI },
+      uTileRotOscMax: { value: Math.PI },
+      uTileRotBase: { value: 0 },
+      // Hue oscillator
+      uHueOscEnabled: { value: false },
+      uHueOscFunction: { value: 0 }, // sin
+      uHueOscSpeed: { value: 0.3 },
+      uHueOscMin: { value: 0 },
+      uHueOscMax: { value: 1 },
     },
     vertexShader,
     fragmentShader,
@@ -190,6 +270,10 @@ export default function ExpansiveRoom() {
   const [tileRotationOscSpeed, setTileRotationOscSpeed] = useState(0.5);
   const [tileRotationOscMin, setTileRotationOscMin] = useState(-Math.PI);
   const [tileRotationOscMax, setTileRotationOscMax] = useState(Math.PI);
+
+  // Time delay for ripple effect
+  const [timeDelay, setTimeDelay] = useState(0);
+  const timeDelayRef = useRef(0);
 
   // Oscillator state — tileScale (expensive)
   const [tileScaleOscEnabled, setTileScaleOscEnabled] = useState(false);
@@ -261,6 +345,9 @@ export default function ExpansiveRoom() {
   const tilingTypeOscSpeedRef = useRef(0.2);
   const tilingTypeOscMinRef = useRef(0);
   const tilingTypeOscMaxRef = useRef(80);
+
+  // Sync time delay state → ref
+  useEffect(() => { timeDelayRef.current = timeDelay; }, [timeDelay]);
 
   // Sync oscillator state → refs
   useEffect(() => { hueOscEnabledRef.current = hueOscEnabled; }, [hueOscEnabled]);
@@ -396,11 +483,17 @@ export default function ExpansiveRoom() {
       timeRef.current += 0.016;
       const t = timeRef.current;
 
-      // Hue oscillator (cheap — update uniform directly at 60fps)
+      // Push time and delay uniforms to shader
+      mat.uniforms.uTime.value = t;
+      mat.uniforms.uTimeDelay.value = timeDelayRef.current;
+
+      // Push hue oscillator params to shader
+      mat.uniforms.uHueOscEnabled.value = hueOscEnabledRef.current;
       if (hueOscEnabledRef.current) {
-        const wave = waveFunctions[hueOscFunctionRef.current];
-        const norm = (wave(t * hueOscSpeedRef.current) + 1) / 2;
-        hueRef.current = hueOscMinRef.current + norm * (hueOscMaxRef.current - hueOscMinRef.current);
+        mat.uniforms.uHueOscFunction.value = waveToIndex[hueOscFunctionRef.current];
+        mat.uniforms.uHueOscSpeed.value = hueOscSpeedRef.current;
+        mat.uniforms.uHueOscMin.value = hueOscMinRef.current;
+        mat.uniforms.uHueOscMax.value = hueOscMaxRef.current;
       }
 
       // Expensive oscillators — compute effective values, rebuild only when changed
@@ -432,13 +525,14 @@ export default function ExpansiveRoom() {
         }
       }
 
-      // Tile rotation — cheap per-frame uniform (no rebuild, 60fps via shader)
+      // Push tile rotation oscillator params to shader
+      mat.uniforms.uTileRotOscEnabled.value = tileRotationOscEnabledRef.current;
+      mat.uniforms.uTileRotBase.value = tileRotationBaseRef.current;
       if (tileRotationOscEnabledRef.current) {
-        const wave = waveFunctions[tileRotationOscFunctionRef.current];
-        const norm = (wave(t * tileRotationOscSpeedRef.current) + 1) / 2;
-        mat.uniforms.uTileRotation.value = tileRotationOscMinRef.current + norm * (tileRotationOscMaxRef.current - tileRotationOscMinRef.current);
-      } else {
-        mat.uniforms.uTileRotation.value = tileRotationBaseRef.current;
+        mat.uniforms.uTileRotOscFunction.value = waveToIndex[tileRotationOscFunctionRef.current];
+        mat.uniforms.uTileRotOscSpeed.value = tileRotationOscSpeedRef.current;
+        mat.uniforms.uTileRotOscMin.value = tileRotationOscMinRef.current;
+        mat.uniforms.uTileRotOscMax.value = tileRotationOscMaxRef.current;
       }
 
       mat.uniforms.uHue.value = hueRef.current;
@@ -574,6 +668,11 @@ export default function ExpansiveRoom() {
       tilingType: pTilingType, roomRadius: pRoomRadius, roomHeight: pRoomHeight,
       tileScale: pTileScale, edgeCurvature: pEdgeCurvature, roomDepth: pRoomDepth,
     };
+
+    // Update focal point to back wall center
+    if (material.uniforms.uFocalPoint) {
+      material.uniforms.uFocalPoint.value.set(0, pRoomHeight / 2, -pRoomDepth / 2);
+    }
   }, []);
 
   // Store rebuild fn in a ref so the animation loop (stable useEffect) can call it
@@ -758,6 +857,12 @@ export default function ExpansiveRoom() {
               >
                 Clear All
               </button>
+            </div>
+
+            {/* Time Delay (ripple) */}
+            <div style={blockStyle}>
+              <label style={labelStyle}>Time Delay: {timeDelay.toFixed(3)}</label>
+              <input type="range" min="0" max="0.05" step="0.001" value={timeDelay} onChange={(e) => setTimeDelay(Number(e.target.value))} style={{ width: "100%" }} />
             </div>
 
             {/* Hue Oscillator */}
