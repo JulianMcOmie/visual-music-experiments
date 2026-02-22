@@ -130,7 +130,6 @@ export function createTilingWallGeometry(
   tileScale: number,
   wallTransform: THREE.Matrix4,
   edgeCurvature: number = 0.5,
-  tileRotation: number = 0,
 ): THREE.BufferGeometry {
   const clampedIdx = Math.max(0, Math.min(80, tilingTypeIndex));
   const typeId = tilingTypes[clampedIdx];
@@ -142,21 +141,7 @@ export function createTilingWallGeometry(
     tiling.setParameters(params);
   }
 
-  let outline = buildPrototileOutline(tiling, edgeCurvature);
-
-  // Rotate prototile vertices around their centroid
-  if (Math.abs(tileRotation) > 0.001) {
-    const cx = outline.reduce((s, p) => s + p.x, 0) / outline.length;
-    const cy = outline.reduce((s, p) => s + p.y, 0) / outline.length;
-    const cos = Math.cos(tileRotation);
-    const sin = Math.sin(tileRotation);
-    outline = outline.map((p) => {
-      const dx = p.x - cx;
-      const dy = p.y - cy;
-      return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
-    });
-  }
-
+  const outline = buildPrototileOutline(tiling, edgeCurvature);
   const { positions: protoFlat, indices: protoIndices } = triangulateTile(outline);
 
   const vertsPerTile = outline.length;
@@ -184,6 +169,7 @@ export function createTilingWallGeometry(
 
   const posArray = new Float32Array(totalVerts * 3);
   const colorArray = new Float32Array(totalVerts * 3);
+  const centroidArray = new Float32Array(totalVerts * 3);
   const idxArray =
     totalVerts > 65535 ? new Uint32Array(totalIndices) : new Uint16Array(totalIndices);
 
@@ -195,10 +181,11 @@ export function createTilingWallGeometry(
     const vertOff = ti * vertsPerTile;
     const idxOff = ti * protoIndices.length;
 
-    // Encode tile identity in vertex colors for the shader
     const aspectFraction = tile.aspect / numAspects;
-    const lightness = 0.35 + (tile.aspect % 3) * 0.1;
+    const lightness = 0.55 + (tile.aspect % 3) * 0.06;
 
+    // First pass: compute positions and accumulate centroid
+    let cx = 0, cy = 0, cz = 0;
     for (let vi = 0; vi < vertsPerTile; vi++) {
       const px = protoFlat[vi * 2];
       const py = protoFlat[vi * 2 + 1];
@@ -207,10 +194,7 @@ export function createTilingWallGeometry(
       const tx = T[0] * px + T[1] * py + T[2];
       const ty = T[3] * px + T[4] * py + T[5];
 
-      const wx = tx * tileScale;
-      const wy = ty * tileScale;
-
-      tempVec.set(wx, wy, 0);
+      tempVec.set(tx * tileScale, ty * tileScale, 0);
       tempVec.applyMatrix4(wallTransform);
 
       const idx3 = (vertOff + vi) * 3;
@@ -218,9 +202,24 @@ export function createTilingWallGeometry(
       posArray[idx3 + 1] = tempVec.y;
       posArray[idx3 + 2] = tempVec.z;
 
+      cx += tempVec.x;
+      cy += tempVec.y;
+      cz += tempVec.z;
+
       colorArray[idx3] = aspectFraction;
       colorArray[idx3 + 1] = lightness;
       colorArray[idx3 + 2] = 0;
+    }
+
+    // Store centroid for all vertices of this tile
+    cx /= vertsPerTile;
+    cy /= vertsPerTile;
+    cz /= vertsPerTile;
+    for (let vi = 0; vi < vertsPerTile; vi++) {
+      const idx3 = (vertOff + vi) * 3;
+      centroidArray[idx3] = cx;
+      centroidArray[idx3 + 1] = cy;
+      centroidArray[idx3 + 2] = cz;
     }
 
     for (let ii = 0; ii < protoIndices.length; ii++) {
@@ -231,6 +230,7 @@ export function createTilingWallGeometry(
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(posArray, 3));
   geometry.setAttribute("color", new THREE.BufferAttribute(colorArray, 3));
+  geometry.setAttribute("tileCentroid", new THREE.BufferAttribute(centroidArray, 3));
   geometry.setIndex(new THREE.BufferAttribute(idxArray, 1));
   geometry.computeVertexNormals();
 

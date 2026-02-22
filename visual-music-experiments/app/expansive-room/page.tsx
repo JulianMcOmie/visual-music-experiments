@@ -4,21 +4,51 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { createTilingWallGeometry } from "./tiling-geometry";
 
+type WaveFunction = "cos" | "sin" | "abs-sin" | "square" | "sawtooth" | "triangle";
+
+const waveFunctions: Record<WaveFunction, (x: number) => number> = {
+  cos: (x) => Math.cos(x),
+  sin: (x) => Math.sin(x),
+  "abs-sin": (x) => Math.abs(Math.sin(x)),
+  square: (x) => (Math.sin(x) >= 0 ? 1 : -1),
+  sawtooth: (x) => 2 * ((x / (2 * Math.PI)) - Math.floor((x / (2 * Math.PI)) + 0.5)),
+  triangle: (x) => 2 * Math.abs(2 * ((x / (2 * Math.PI)) - Math.floor((x / (2 * Math.PI)) + 0.5))) - 1,
+};
+
 // HSL-to-RGB shader function + tile coloring with lighting
 const vertexShader = /* glsl */ `
   #include <common>
   #include <lights_pars_begin>
 
   attribute vec3 color;
+  attribute vec3 tileCentroid;
+  uniform float uTileRotation;
+
   varying vec3 vColor;
   varying vec3 vNormal;
   varying vec3 vViewPosition;
 
+  // Rodrigues rotation: rotate v around unit axis k by angle a
+  vec3 rotateAxis(vec3 v, vec3 k, float a) {
+    float c = cos(a);
+    float s = sin(a);
+    return v * c + cross(k, v) * s + k * dot(k, v) * (1.0 - c);
+  }
+
   void main() {
     vColor = color;
+
+    // Rotate each tile's vertices around its centroid, along the surface normal
+    vec3 pos = position;
+    if (abs(uTileRotation) > 0.001) {
+      vec3 offset = position - tileCentroid;
+      vec3 axis = normalize(normal);
+      pos = tileCentroid + rotateAxis(offset, axis, uTileRotation);
+    }
+
     vec3 transformedNormal = normalMatrix * normal;
     vNormal = normalize(transformedNormal);
-    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     vViewPosition = -mvPosition.xyz;
     gl_Position = projectionMatrix * mvPosition;
   }
@@ -57,8 +87,8 @@ const fragmentShader = /* glsl */ `
     float aspectFraction = vColor.r;
     float lightness = vColor.g;
 
-    // Compute final hue from uniform + per-tile offset
-    float hue = fract(uHue + aspectFraction * 0.15);
+    // Compute final hue from uniform + per-tile offset (tight analogous spread)
+    float hue = fract(uHue + aspectFraction * 0.08);
     vec3 baseColor = hsl2rgb(hue, uSaturation, lightness);
 
     // Simple lighting using Three.js light data
@@ -99,9 +129,6 @@ const fragmentShader = /* glsl */ `
 
     vec3 finalColor = baseColor * totalLight;
 
-    // Rough tone mapping to keep colors from blowing out
-    finalColor = finalColor / (finalColor + vec3(1.0));
-
     gl_FragColor = vec4(finalColor, 1.0);
   }
 `;
@@ -112,6 +139,7 @@ function createTileMaterial(hue: number, saturation: number): THREE.ShaderMateri
       ...THREE.UniformsLib.lights,
       uHue: { value: hue },
       uSaturation: { value: saturation },
+      uTileRotation: { value: 0 },
     },
     vertexShader,
     fragmentShader,
@@ -136,11 +164,170 @@ export default function ExpansiveRoom() {
 
   // Cheap params (uniform-driven) — refs for instant updates, state for UI display
   const hueRef = useRef(0.58);
-  const saturationRef = useRef(0.55);
-  const brightnessRef = useRef(1.2);
+  const saturationRef = useRef(0.85);
+  const brightnessRef = useRef(1.8);
   const [hueDisplay, setHueDisplay] = useState(0.58);
-  const [saturationDisplay, setSaturationDisplay] = useState(0.55);
-  const [brightnessDisplay, setBrightnessDisplay] = useState(1.2);
+  const [saturationDisplay, setSaturationDisplay] = useState(0.85);
+  const [brightnessDisplay, setBrightnessDisplay] = useState(1.8);
+
+  // Oscillator state — hue (cheap)
+  const [hueOscEnabled, setHueOscEnabled] = useState(false);
+  const [hueOscFunction, setHueOscFunction] = useState<WaveFunction>("sin");
+  const [hueOscSpeed, setHueOscSpeed] = useState(0.3);
+  const [hueOscMin, setHueOscMin] = useState(0);
+  const [hueOscMax, setHueOscMax] = useState(1);
+
+  // Oscillator state — roomDepth (expensive)
+  const [roomDepthOscEnabled, setRoomDepthOscEnabled] = useState(false);
+  const [roomDepthOscFunction, setRoomDepthOscFunction] = useState<WaveFunction>("sin");
+  const [roomDepthOscSpeed, setRoomDepthOscSpeed] = useState(0.3);
+  const [roomDepthOscMin, setRoomDepthOscMin] = useState(100);
+  const [roomDepthOscMax, setRoomDepthOscMax] = useState(2000);
+
+  // Oscillator state — tileRotation (expensive)
+  const [tileRotationOscEnabled, setTileRotationOscEnabled] = useState(false);
+  const [tileRotationOscFunction, setTileRotationOscFunction] = useState<WaveFunction>("triangle");
+  const [tileRotationOscSpeed, setTileRotationOscSpeed] = useState(0.5);
+  const [tileRotationOscMin, setTileRotationOscMin] = useState(-Math.PI);
+  const [tileRotationOscMax, setTileRotationOscMax] = useState(Math.PI);
+
+  // Oscillator state — tileScale (expensive)
+  const [tileScaleOscEnabled, setTileScaleOscEnabled] = useState(false);
+  const [tileScaleOscFunction, setTileScaleOscFunction] = useState<WaveFunction>("sin");
+  const [tileScaleOscSpeed, setTileScaleOscSpeed] = useState(0.4);
+  const [tileScaleOscMin, setTileScaleOscMin] = useState(3);
+  const [tileScaleOscMax, setTileScaleOscMax] = useState(15);
+
+  // Oscillator state — roomHeight (expensive)
+  const [roomHeightOscEnabled, setRoomHeightOscEnabled] = useState(false);
+  const [roomHeightOscFunction, setRoomHeightOscFunction] = useState<WaveFunction>("sin");
+  const [roomHeightOscSpeed, setRoomHeightOscSpeed] = useState(0.3);
+  const [roomHeightOscMin, setRoomHeightOscMin] = useState(80);
+  const [roomHeightOscMax, setRoomHeightOscMax] = useState(300);
+
+  // Oscillator state — roomRadius (expensive)
+  const [roomRadiusOscEnabled, setRoomRadiusOscEnabled] = useState(false);
+  const [roomRadiusOscFunction, setRoomRadiusOscFunction] = useState<WaveFunction>("sin");
+  const [roomRadiusOscSpeed, setRoomRadiusOscSpeed] = useState(0.3);
+  const [roomRadiusOscMin, setRoomRadiusOscMin] = useState(80);
+  const [roomRadiusOscMax, setRoomRadiusOscMax] = useState(350);
+
+  // Oscillator state — tilingType (expensive)
+  const [tilingTypeOscEnabled, setTilingTypeOscEnabled] = useState(false);
+  const [tilingTypeOscFunction, setTilingTypeOscFunction] = useState<WaveFunction>("sawtooth");
+  const [tilingTypeOscSpeed, setTilingTypeOscSpeed] = useState(0.2);
+  const [tilingTypeOscMin, setTilingTypeOscMin] = useState(0);
+  const [tilingTypeOscMax, setTilingTypeOscMax] = useState(80);
+
+  // Oscillator refs (synced from state for animation loop access)
+  const hueOscEnabledRef = useRef(false);
+  const hueOscFunctionRef = useRef<WaveFunction>("sin");
+  const hueOscSpeedRef = useRef(0.3);
+  const hueOscMinRef = useRef(0);
+  const hueOscMaxRef = useRef(1);
+
+  const roomDepthOscEnabledRef = useRef(false);
+  const roomDepthOscFunctionRef = useRef<WaveFunction>("sin");
+  const roomDepthOscSpeedRef = useRef(0.3);
+  const roomDepthOscMinRef = useRef(100);
+  const roomDepthOscMaxRef = useRef(2000);
+
+  const tileRotationOscEnabledRef = useRef(false);
+  const tileRotationOscFunctionRef = useRef<WaveFunction>("triangle");
+  const tileRotationOscSpeedRef = useRef(0.5);
+  const tileRotationOscMinRef = useRef(-Math.PI);
+  const tileRotationOscMaxRef = useRef(Math.PI);
+
+  const tileScaleOscEnabledRef = useRef(false);
+  const tileScaleOscFunctionRef = useRef<WaveFunction>("sin");
+  const tileScaleOscSpeedRef = useRef(0.4);
+  const tileScaleOscMinRef = useRef(3);
+  const tileScaleOscMaxRef = useRef(15);
+
+  const roomHeightOscEnabledRef = useRef(false);
+  const roomHeightOscFunctionRef = useRef<WaveFunction>("sin");
+  const roomHeightOscSpeedRef = useRef(0.3);
+  const roomHeightOscMinRef = useRef(80);
+  const roomHeightOscMaxRef = useRef(300);
+
+  const roomRadiusOscEnabledRef = useRef(false);
+  const roomRadiusOscFunctionRef = useRef<WaveFunction>("sin");
+  const roomRadiusOscSpeedRef = useRef(0.3);
+  const roomRadiusOscMinRef = useRef(80);
+  const roomRadiusOscMaxRef = useRef(350);
+
+  const tilingTypeOscEnabledRef = useRef(false);
+  const tilingTypeOscFunctionRef = useRef<WaveFunction>("sawtooth");
+  const tilingTypeOscSpeedRef = useRef(0.2);
+  const tilingTypeOscMinRef = useRef(0);
+  const tilingTypeOscMaxRef = useRef(80);
+
+  // Sync oscillator state → refs
+  useEffect(() => { hueOscEnabledRef.current = hueOscEnabled; }, [hueOscEnabled]);
+  useEffect(() => { hueOscFunctionRef.current = hueOscFunction; }, [hueOscFunction]);
+  useEffect(() => { hueOscSpeedRef.current = hueOscSpeed; }, [hueOscSpeed]);
+  useEffect(() => { hueOscMinRef.current = hueOscMin; }, [hueOscMin]);
+  useEffect(() => { hueOscMaxRef.current = hueOscMax; }, [hueOscMax]);
+
+  useEffect(() => { roomDepthOscEnabledRef.current = roomDepthOscEnabled; }, [roomDepthOscEnabled]);
+  useEffect(() => { roomDepthOscFunctionRef.current = roomDepthOscFunction; }, [roomDepthOscFunction]);
+  useEffect(() => { roomDepthOscSpeedRef.current = roomDepthOscSpeed; }, [roomDepthOscSpeed]);
+  useEffect(() => { roomDepthOscMinRef.current = roomDepthOscMin; }, [roomDepthOscMin]);
+  useEffect(() => { roomDepthOscMaxRef.current = roomDepthOscMax; }, [roomDepthOscMax]);
+
+  useEffect(() => { tileRotationOscEnabledRef.current = tileRotationOscEnabled; }, [tileRotationOscEnabled]);
+  useEffect(() => { tileRotationOscFunctionRef.current = tileRotationOscFunction; }, [tileRotationOscFunction]);
+  useEffect(() => { tileRotationOscSpeedRef.current = tileRotationOscSpeed; }, [tileRotationOscSpeed]);
+  useEffect(() => { tileRotationOscMinRef.current = tileRotationOscMin; }, [tileRotationOscMin]);
+  useEffect(() => { tileRotationOscMaxRef.current = tileRotationOscMax; }, [tileRotationOscMax]);
+
+  useEffect(() => { tileScaleOscEnabledRef.current = tileScaleOscEnabled; }, [tileScaleOscEnabled]);
+  useEffect(() => { tileScaleOscFunctionRef.current = tileScaleOscFunction; }, [tileScaleOscFunction]);
+  useEffect(() => { tileScaleOscSpeedRef.current = tileScaleOscSpeed; }, [tileScaleOscSpeed]);
+  useEffect(() => { tileScaleOscMinRef.current = tileScaleOscMin; }, [tileScaleOscMin]);
+  useEffect(() => { tileScaleOscMaxRef.current = tileScaleOscMax; }, [tileScaleOscMax]);
+
+  useEffect(() => { roomHeightOscEnabledRef.current = roomHeightOscEnabled; }, [roomHeightOscEnabled]);
+  useEffect(() => { roomHeightOscFunctionRef.current = roomHeightOscFunction; }, [roomHeightOscFunction]);
+  useEffect(() => { roomHeightOscSpeedRef.current = roomHeightOscSpeed; }, [roomHeightOscSpeed]);
+  useEffect(() => { roomHeightOscMinRef.current = roomHeightOscMin; }, [roomHeightOscMin]);
+  useEffect(() => { roomHeightOscMaxRef.current = roomHeightOscMax; }, [roomHeightOscMax]);
+
+  useEffect(() => { roomRadiusOscEnabledRef.current = roomRadiusOscEnabled; }, [roomRadiusOscEnabled]);
+  useEffect(() => { roomRadiusOscFunctionRef.current = roomRadiusOscFunction; }, [roomRadiusOscFunction]);
+  useEffect(() => { roomRadiusOscSpeedRef.current = roomRadiusOscSpeed; }, [roomRadiusOscSpeed]);
+  useEffect(() => { roomRadiusOscMinRef.current = roomRadiusOscMin; }, [roomRadiusOscMin]);
+  useEffect(() => { roomRadiusOscMaxRef.current = roomRadiusOscMax; }, [roomRadiusOscMax]);
+
+  useEffect(() => { tilingTypeOscEnabledRef.current = tilingTypeOscEnabled; }, [tilingTypeOscEnabled]);
+  useEffect(() => { tilingTypeOscFunctionRef.current = tilingTypeOscFunction; }, [tilingTypeOscFunction]);
+  useEffect(() => { tilingTypeOscSpeedRef.current = tilingTypeOscSpeed; }, [tilingTypeOscSpeed]);
+  useEffect(() => { tilingTypeOscMinRef.current = tilingTypeOscMin; }, [tilingTypeOscMin]);
+  useEffect(() => { tilingTypeOscMaxRef.current = tilingTypeOscMax; }, [tilingTypeOscMax]);
+
+  // Sync slider state → base refs (for when oscillators are off or user changes manually)
+  useEffect(() => { tilingTypeBaseRef.current = tilingType; }, [tilingType]);
+  useEffect(() => { roomRadiusBaseRef.current = roomRadius; }, [roomRadius]);
+  useEffect(() => { roomHeightBaseRef.current = roomHeight; }, [roomHeight]);
+  useEffect(() => { tileScaleBaseRef.current = tileScale; }, [tileScale]);
+  useEffect(() => { edgeCurvatureBaseRef.current = edgeCurvature; }, [edgeCurvature]);
+  useEffect(() => { tileRotationBaseRef.current = tileRotation; }, [tileRotation]);
+  useEffect(() => { roomDepthBaseRef.current = roomDepth; }, [roomDepth]);
+
+  // Base-value refs for expensive params (synced from slider state, used when oscillator is off)
+  const tilingTypeBaseRef = useRef(3);
+  const roomRadiusBaseRef = useRef(200);
+  const roomHeightBaseRef = useRef(200);
+  const tileScaleBaseRef = useRef(8);
+  const edgeCurvatureBaseRef = useRef(0.5);
+  const tileRotationBaseRef = useRef(0);
+  const roomDepthBaseRef = useRef(400);
+
+  // Last-rendered values (to detect when rebuild is actually needed)
+  const lastRenderedRef = useRef({
+    tilingType: 3, roomRadius: 200, roomHeight: 200,
+    tileScale: 8, edgeCurvature: 0.5, roomDepth: 400,
+  });
 
   // Refs for Three.js objects
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -150,6 +337,9 @@ export default function ExpansiveRoom() {
   const tiledMeshesRef = useRef<THREE.Mesh[]>([]);
   const lightsRef = useRef<THREE.Light[]>([]);
   const rafRef = useRef<number>(0);
+  const timeRef = useRef(0);
+  const lastRebuildRef = useRef(0);
+  const rebuildFnRef = useRef<((tiling: number, radius: number, height: number, scale: number, curvature: number, depth: number) => void) | null>(null);
 
   useEffect(() => {
     if (window.location.search.includes("preview")) {
@@ -203,6 +393,54 @@ export default function ExpansiveRoom() {
       const r = rendererRef.current;
       if (!mat || !r) return;
 
+      timeRef.current += 0.016;
+      const t = timeRef.current;
+
+      // Hue oscillator (cheap — update uniform directly at 60fps)
+      if (hueOscEnabledRef.current) {
+        const wave = waveFunctions[hueOscFunctionRef.current];
+        const norm = (wave(t * hueOscSpeedRef.current) + 1) / 2;
+        hueRef.current = hueOscMinRef.current + norm * (hueOscMaxRef.current - hueOscMinRef.current);
+      }
+
+      // Expensive oscillators — compute effective values, rebuild only when changed
+      // Throttled to ~5 rebuilds/sec
+      const now = performance.now();
+      if (now - lastRebuildRef.current > 200) {
+        const getOsc = (enabled: boolean, baseVal: number, fnRef: WaveFunction, speed: number, min: number, max: number, round: boolean) => {
+          if (!enabled) return baseVal;
+          const wave = waveFunctions[fnRef];
+          const norm = (wave(t * speed) + 1) / 2;
+          const val = min + norm * (max - min);
+          return round ? Math.round(val) : val;
+        };
+
+        const effTilingType = getOsc(tilingTypeOscEnabledRef.current, tilingTypeBaseRef.current, tilingTypeOscFunctionRef.current, tilingTypeOscSpeedRef.current, tilingTypeOscMinRef.current, tilingTypeOscMaxRef.current, true);
+        const effRoomRadius = getOsc(roomRadiusOscEnabledRef.current, roomRadiusBaseRef.current, roomRadiusOscFunctionRef.current, roomRadiusOscSpeedRef.current, roomRadiusOscMinRef.current, roomRadiusOscMaxRef.current, true);
+        const effRoomHeight = getOsc(roomHeightOscEnabledRef.current, roomHeightBaseRef.current, roomHeightOscFunctionRef.current, roomHeightOscSpeedRef.current, roomHeightOscMinRef.current, roomHeightOscMaxRef.current, true);
+        const effTileScale = getOsc(tileScaleOscEnabledRef.current, tileScaleBaseRef.current, tileScaleOscFunctionRef.current, tileScaleOscSpeedRef.current, tileScaleOscMinRef.current, tileScaleOscMaxRef.current, false);
+        const effRoomDepth = getOsc(roomDepthOscEnabledRef.current, roomDepthBaseRef.current, roomDepthOscFunctionRef.current, roomDepthOscSpeedRef.current, roomDepthOscMinRef.current, roomDepthOscMaxRef.current, true);
+        const effEdgeCurvature = edgeCurvatureBaseRef.current;
+
+        const last = lastRenderedRef.current;
+        if (effTilingType !== last.tilingType || effRoomRadius !== last.roomRadius ||
+            effRoomHeight !== last.roomHeight || effTileScale !== last.tileScale ||
+            effEdgeCurvature !== last.edgeCurvature ||
+            effRoomDepth !== last.roomDepth) {
+          rebuildFnRef.current?.(effTilingType, effRoomRadius, effRoomHeight, effTileScale, effEdgeCurvature, effRoomDepth);
+          lastRebuildRef.current = now;
+        }
+      }
+
+      // Tile rotation — cheap per-frame uniform (no rebuild, 60fps via shader)
+      if (tileRotationOscEnabledRef.current) {
+        const wave = waveFunctions[tileRotationOscFunctionRef.current];
+        const norm = (wave(t * tileRotationOscSpeedRef.current) + 1) / 2;
+        mat.uniforms.uTileRotation.value = tileRotationOscMinRef.current + norm * (tileRotationOscMaxRef.current - tileRotationOscMinRef.current);
+      } else {
+        mat.uniforms.uTileRotation.value = tileRotationBaseRef.current;
+      }
+
       mat.uniforms.uHue.value = hueRef.current;
       mat.uniforms.uSaturation.value = saturationRef.current;
       r.toneMappingExposure = brightnessRef.current;
@@ -224,8 +462,11 @@ export default function ExpansiveRoom() {
     };
   }, []);
 
-  // Rebuild geometry when expensive params change
-  useEffect(() => {
+  // Rebuild geometry function — called from animation loop, reads explicit params
+  const doRebuild = useCallback((
+    pTilingType: number, pRoomRadius: number, pRoomHeight: number,
+    pTileScale: number, pEdgeCurvature: number, pRoomDepth: number,
+  ) => {
     const scene = sceneRef.current;
     const material = materialRef.current;
     if (!scene || !material) return;
@@ -254,41 +495,41 @@ export default function ExpansiveRoom() {
     scene.add(hemiLight);
     lightsRef.current.push(hemiLight);
 
-    const maxDim = Math.max(roomRadius, roomDepth);
+    const maxDim = Math.max(pRoomRadius, pRoomDepth);
     const centralLight = new THREE.PointLight(0xffeedd, 3, maxDim * 3, 1.2);
-    centralLight.position.set(0, roomHeight * 0.85, 0);
+    centralLight.position.set(0, pRoomHeight * 0.85, 0);
     scene.add(centralLight);
     lightsRef.current.push(centralLight);
 
-    const numLightsZ = Math.max(3, Math.ceil(roomDepth / 200));
+    const numLightsZ = Math.max(3, Math.ceil(pRoomDepth / 200));
     for (let zi = 0; zi < numLightsZ; zi++) {
-      const zPos = -roomDepth / 2 + (zi + 0.5) * (roomDepth / numLightsZ);
+      const zPos = -pRoomDepth / 2 + (zi + 0.5) * (pRoomDepth / numLightsZ);
       for (let ai = 0; ai < 4; ai++) {
         const a = (ai / 4) * Math.PI * 2;
         const pl = new THREE.PointLight(0xddeeff, 1.5, maxDim * 2, 1.5);
-        pl.position.set(Math.sin(a) * roomRadius * 0.5, roomHeight * 0.4, zPos + Math.cos(a) * roomRadius * 0.5);
+        pl.position.set(Math.sin(a) * pRoomRadius * 0.5, pRoomHeight * 0.4, zPos + Math.cos(a) * pRoomRadius * 0.5);
         scene.add(pl);
         lightsRef.current.push(pl);
       }
     }
 
-    const fillZPositions = [0, -roomDepth * 0.3, roomDepth * 0.3];
+    const fillZPositions = [0, -pRoomDepth * 0.3, pRoomDepth * 0.3];
     for (const fz of fillZPositions) {
       const fl = new THREE.PointLight(0xccbbaa, 0.8, maxDim * 2, 1.8);
-      fl.position.set(0, roomHeight * 0.15, fz);
+      fl.position.set(0, pRoomHeight * 0.15, fz);
       scene.add(fl);
       lightsRef.current.push(fl);
     }
 
     // Build rectangular hall
-    const roomWidth = roomRadius * 2;
+    const roomWidth = pRoomRadius * 2;
     const halfW = roomWidth / 2;
-    const halfD = roomDepth / 2;
+    const halfD = pRoomDepth / 2;
 
     const addSurface = (w: number, h: number, transform: THREE.Matrix4) => {
       const geo = createTilingWallGeometry(
-        tilingType, w, h, tileScale, transform,
-        edgeCurvature, tileRotation,
+        pTilingType, w, h, pTileScale, transform,
+        pEdgeCurvature,
       );
       const mesh = new THREE.Mesh(geo, material);
       scene.add(mesh);
@@ -297,37 +538,51 @@ export default function ExpansiveRoom() {
 
     // Floor
     const floorT = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
-    addSurface(roomWidth, roomDepth, floorT);
+    addSurface(roomWidth, pRoomDepth, floorT);
 
     // Ceiling
     const ceilT = new THREE.Matrix4();
-    ceilT.multiply(new THREE.Matrix4().makeTranslation(0, roomHeight, 0));
+    ceilT.multiply(new THREE.Matrix4().makeTranslation(0, pRoomHeight, 0));
     ceilT.multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2));
-    addSurface(roomWidth, roomDepth, ceilT);
+    addSurface(roomWidth, pRoomDepth, ceilT);
 
     // Left wall
     const leftT = new THREE.Matrix4();
-    leftT.multiply(new THREE.Matrix4().makeTranslation(-halfW, roomHeight / 2, 0));
+    leftT.multiply(new THREE.Matrix4().makeTranslation(-halfW, pRoomHeight / 2, 0));
     leftT.multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2));
-    addSurface(roomDepth, roomHeight, leftT);
+    addSurface(pRoomDepth, pRoomHeight, leftT);
 
     // Right wall
     const rightT = new THREE.Matrix4();
-    rightT.multiply(new THREE.Matrix4().makeTranslation(halfW, roomHeight / 2, 0));
+    rightT.multiply(new THREE.Matrix4().makeTranslation(halfW, pRoomHeight / 2, 0));
     rightT.multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 2));
-    addSurface(roomDepth, roomHeight, rightT);
+    addSurface(pRoomDepth, pRoomHeight, rightT);
 
     // Back wall
     const backT = new THREE.Matrix4();
-    backT.multiply(new THREE.Matrix4().makeTranslation(0, roomHeight / 2, -halfD));
-    addSurface(roomWidth, roomHeight, backT);
+    backT.multiply(new THREE.Matrix4().makeTranslation(0, pRoomHeight / 2, -halfD));
+    addSurface(roomWidth, pRoomHeight, backT);
 
     // Front wall
     const frontT = new THREE.Matrix4();
-    frontT.multiply(new THREE.Matrix4().makeTranslation(0, roomHeight / 2, halfD));
+    frontT.multiply(new THREE.Matrix4().makeTranslation(0, pRoomHeight / 2, halfD));
     frontT.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
-    addSurface(roomWidth, roomHeight, frontT);
-  }, [tilingType, roomRadius, roomHeight, roomDepth, tileScale, edgeCurvature, tileRotation]);
+    addSurface(roomWidth, pRoomHeight, frontT);
+
+    // Track what we rendered
+    lastRenderedRef.current = {
+      tilingType: pTilingType, roomRadius: pRoomRadius, roomHeight: pRoomHeight,
+      tileScale: pTileScale, edgeCurvature: pEdgeCurvature, roomDepth: pRoomDepth,
+    };
+  }, []);
+
+  // Store rebuild fn in a ref so the animation loop (stable useEffect) can call it
+  rebuildFnRef.current = doRebuild;
+
+  // Rebuild when slider state changes (manual user interaction)
+  useEffect(() => {
+    doRebuild(tilingType, roomRadius, roomHeight, tileScale, edgeCurvature, roomDepth);
+  }, [tilingType, roomRadius, roomHeight, roomDepth, tileScale, edgeCurvature, doRebuild]);
 
   // Preview mode message handler
   useEffect(() => {
@@ -358,14 +613,35 @@ export default function ExpansiveRoom() {
     setBrightnessDisplay(v);
   }, []);
 
-  const sliderStyle = { width: "100%", cursor: "pointer" };
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    marginBottom: "6px",
-    fontSize: "13px",
-    color: "#fff",
-  };
-  const blockStyle: React.CSSProperties = { marginBottom: "15px" };
+  const clearAllOscillators = useCallback(() => {
+    setHueOscEnabled(false);
+    setRoomDepthOscEnabled(false);
+    setTileRotationOscEnabled(false);
+    setTileScaleOscEnabled(false);
+    setRoomHeightOscEnabled(false);
+    setRoomRadiusOscEnabled(false);
+    setTilingTypeOscEnabled(false);
+  }, []);
+
+  const blockStyle: React.CSSProperties = { marginBottom: "20px" };
+  const labelStyle: React.CSSProperties = { display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" };
+  const oscDetStyle: React.CSSProperties = { marginBottom: "15px" };
+  const oscSumStyle: React.CSSProperties = { cursor: "pointer", padding: "8px 0", color: "#fff", fontSize: "13px" };
+  const oscBodyStyle: React.CSSProperties = { padding: "10px 0 0 10px" };
+  const oscLblStyle: React.CSSProperties = { display: "block", marginBottom: "8px", fontSize: "12px" };
+  const oscCheckStyle: React.CSSProperties = { display: "block", marginBottom: "8px", fontSize: "12px" };
+  const oscSelectStyle: React.CSSProperties = { marginLeft: "8px", background: "#222", color: "#fff", border: "1px solid #444", padding: "4px", borderRadius: "4px" };
+
+  const waveOptions = (
+    <>
+      <option value="sin">Sin</option>
+      <option value="cos">Cos</option>
+      <option value="abs-sin">Abs Sin</option>
+      <option value="square">Square</option>
+      <option value="sawtooth">Sawtooth</option>
+      <option value="triangle">Triangle</option>
+    </>
+  );
 
   return (
     <div
@@ -381,174 +657,325 @@ export default function ExpansiveRoom() {
         <div
           style={{
             position: "absolute",
-            top: "20px",
-            left: "20px",
-            background: "rgba(0, 0, 0, 0.8)",
+            top: 0,
+            left: 0,
+            width: "280px",
+            height: "100vh",
+            background: "rgba(0, 0, 0, 0.7)",
+            color: "#fff",
             padding: "20px",
-            borderRadius: "8px",
-            minWidth: "250px",
-            maxHeight: "90vh",
+            boxSizing: "border-box",
             overflowY: "auto",
             zIndex: 10,
           }}
         >
+          {/* Header */}
           <div style={{ marginBottom: "20px", paddingBottom: "15px", borderBottom: "1px solid #444" }}>
-            <a href="/" style={{ fontSize: "12px", color: "#4488ff", textDecoration: "none" }}>
+            <a href="/" style={{ fontSize: "12px", color: "#66ccff", textDecoration: "none" }}>
               &larr; Gallery
             </a>
-            <h2 style={{ margin: "8px 0 0 0", fontSize: "18px", color: "#fff" }}>
-              Expansive Room
-            </h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+              <h2 style={{ margin: 0, fontSize: "18px", color: "#fff" }}>
+                Expansive Room
+              </h2>
+            </div>
+          </div>
+
+          {/* === Parameter Sliders === */}
+
+          <div style={blockStyle}>
+            <label style={labelStyle}>Tiling Type: {tilingType}</label>
+            <input type="range" min="0" max="80" step="1" value={tilingType} onChange={(e) => setTilingType(Number(e.target.value))} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>
-              Tiling Type: {tilingType}
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="80"
-              step="1"
-              value={tilingType}
-              onChange={(e) => setTilingType(Number(e.target.value))}
-              style={sliderStyle}
-            />
+            <label style={labelStyle}>Hue: {hueDisplay.toFixed(2)}</label>
+            <input type="range" min="0" max="1" step="0.01" value={hueDisplay} onChange={onHueChange} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>
-              Hue: {hueDisplay.toFixed(2)}
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={hueDisplay}
-              onChange={onHueChange}
-              style={sliderStyle}
-            />
+            <label style={labelStyle}>Room Radius: {roomRadius}</label>
+            <input type="range" min="50" max="400" step="10" value={roomRadius} onChange={(e) => setRoomRadius(Number(e.target.value))} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>
-              Room Radius: {roomRadius}
-            </label>
-            <input
-              type="range"
-              min="50"
-              max="400"
-              step="10"
-              value={roomRadius}
-              onChange={(e) => setRoomRadius(Number(e.target.value))}
-              style={sliderStyle}
-            />
+            <label style={labelStyle}>Room Height: {roomHeight}</label>
+            <input type="range" min="50" max="400" step="10" value={roomHeight} onChange={(e) => setRoomHeight(Number(e.target.value))} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>
-              Room Height: {roomHeight}
-            </label>
-            <input
-              type="range"
-              min="50"
-              max="400"
-              step="10"
-              value={roomHeight}
-              onChange={(e) => setRoomHeight(Number(e.target.value))}
-              style={sliderStyle}
-            />
+            <label style={labelStyle}>Tile Scale: {tileScale.toFixed(1)}</label>
+            <input type="range" min="2" max="20" step="0.5" value={tileScale} onChange={(e) => setTileScale(Number(e.target.value))} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>
-              Tile Scale: {tileScale.toFixed(1)}
-            </label>
-            <input
-              type="range"
-              min="2"
-              max="20"
-              step="0.5"
-              value={tileScale}
-              onChange={(e) => setTileScale(Number(e.target.value))}
-              style={sliderStyle}
-            />
+            <label style={labelStyle}>Edge Curvature: {edgeCurvature.toFixed(2)}</label>
+            <input type="range" min="0" max="1" step="0.05" value={edgeCurvature} onChange={(e) => setEdgeCurvature(Number(e.target.value))} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>
-              Edge Curvature: {edgeCurvature.toFixed(2)}
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={edgeCurvature}
-              onChange={(e) => setEdgeCurvature(Number(e.target.value))}
-              style={sliderStyle}
-            />
+            <label style={labelStyle}>Tile Rotation: {Math.round(tileRotation * 180 / Math.PI)}&deg;</label>
+            <input type="range" min={-Math.PI} max={Math.PI} step="0.01" value={tileRotation} onChange={(e) => setTileRotation(Number(e.target.value))} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>
-              Tile Rotation: {Math.round(tileRotation * 180 / Math.PI)}&deg;
-            </label>
-            <input
-              type="range"
-              min={-Math.PI}
-              max={Math.PI}
-              step="0.01"
-              value={tileRotation}
-              onChange={(e) => setTileRotation(Number(e.target.value))}
-              style={sliderStyle}
-            />
+            <label style={labelStyle}>Room Depth: {roomDepth}</label>
+            <input type="range" min="100" max="4000" step="50" value={roomDepth} onChange={(e) => setRoomDepth(Number(e.target.value))} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>
-              Room Depth: {roomDepth}
-            </label>
-            <input
-              type="range"
-              min="100"
-              max="4000"
-              step="50"
-              value={roomDepth}
-              onChange={(e) => setRoomDepth(Number(e.target.value))}
-              style={sliderStyle}
-            />
+            <label style={labelStyle}>Brightness: {brightnessDisplay.toFixed(1)}</label>
+            <input type="range" min="0.3" max="3" step="0.1" value={brightnessDisplay} onChange={onBrightnessChange} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>
-              Brightness: {brightnessDisplay.toFixed(1)}
-            </label>
-            <input
-              type="range"
-              min="0.3"
-              max="3"
-              step="0.1"
-              value={brightnessDisplay}
-              onChange={onBrightnessChange}
-              style={sliderStyle}
-            />
+            <label style={labelStyle}>Saturation: {saturationDisplay.toFixed(2)}</label>
+            <input type="range" min="0" max="1" step="0.05" value={saturationDisplay} onChange={onSaturationChange} style={{ width: "100%" }} />
           </div>
 
-          <div style={blockStyle}>
-            <label style={labelStyle}>
-              Saturation: {saturationDisplay.toFixed(2)}
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={saturationDisplay}
-              onChange={onSaturationChange}
-              style={sliderStyle}
-            />
+          {/* === Oscillators Section === */}
+          <div style={{ marginTop: "30px", paddingTop: "20px", borderTop: "1px solid #444" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+              <h3 style={{ margin: 0, fontSize: "14px", color: "#66ccff", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Oscillators
+              </h3>
+              <button
+                onClick={clearAllOscillators}
+                style={{
+                  background: "#ff4444",
+                  color: "#fff",
+                  border: "none",
+                  padding: "6px 12px",
+                  borderRadius: "4px",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = "#ff6666"}
+                onMouseOut={(e) => e.currentTarget.style.background = "#ff4444"}
+              >
+                Clear All
+              </button>
+            </div>
+
+            {/* Hue Oscillator */}
+            <details style={oscDetStyle}>
+              <summary style={oscSumStyle}>
+                Hue Oscillator {hueOscEnabled ? "\u2713" : ""}
+              </summary>
+              <div style={oscBodyStyle}>
+                <label style={oscCheckStyle}>
+                  <input type="checkbox" checked={hueOscEnabled} onChange={(e) => setHueOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={oscLblStyle}>
+                  Function:
+                  <select value={hueOscFunction} onChange={(e) => setHueOscFunction(e.target.value as WaveFunction)} style={oscSelectStyle}>
+                    {waveOptions}
+                  </select>
+                </label>
+                <label style={oscLblStyle}>
+                  Speed: {hueOscSpeed.toFixed(2)}
+                  <input type="range" min="0.05" max="3" step="0.05" value={hueOscSpeed} onChange={(e) => setHueOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={oscLblStyle}>
+                  Min: {hueOscMin.toFixed(2)}
+                  <input type="range" min="0" max="1" step="0.01" value={hueOscMin} onChange={(e) => setHueOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {hueOscMax.toFixed(2)}
+                  <input type="range" min="0" max="1" step="0.01" value={hueOscMax} onChange={(e) => setHueOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Tiling Type Oscillator */}
+            <details style={oscDetStyle}>
+              <summary style={oscSumStyle}>
+                Tiling Type Oscillator {tilingTypeOscEnabled ? "\u2713" : ""}
+              </summary>
+              <div style={oscBodyStyle}>
+                <label style={oscCheckStyle}>
+                  <input type="checkbox" checked={tilingTypeOscEnabled} onChange={(e) => setTilingTypeOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={oscLblStyle}>
+                  Function:
+                  <select value={tilingTypeOscFunction} onChange={(e) => setTilingTypeOscFunction(e.target.value as WaveFunction)} style={oscSelectStyle}>
+                    {waveOptions}
+                  </select>
+                </label>
+                <label style={oscLblStyle}>
+                  Speed: {tilingTypeOscSpeed.toFixed(2)}
+                  <input type="range" min="0.05" max="2" step="0.05" value={tilingTypeOscSpeed} onChange={(e) => setTilingTypeOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={oscLblStyle}>
+                  Min: {tilingTypeOscMin}
+                  <input type="range" min="0" max="80" step="1" value={tilingTypeOscMin} onChange={(e) => setTilingTypeOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {tilingTypeOscMax}
+                  <input type="range" min="0" max="80" step="1" value={tilingTypeOscMax} onChange={(e) => setTilingTypeOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Room Radius Oscillator */}
+            <details style={oscDetStyle}>
+              <summary style={oscSumStyle}>
+                Room Radius Oscillator {roomRadiusOscEnabled ? "\u2713" : ""}
+              </summary>
+              <div style={oscBodyStyle}>
+                <label style={oscCheckStyle}>
+                  <input type="checkbox" checked={roomRadiusOscEnabled} onChange={(e) => setRoomRadiusOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={oscLblStyle}>
+                  Function:
+                  <select value={roomRadiusOscFunction} onChange={(e) => setRoomRadiusOscFunction(e.target.value as WaveFunction)} style={oscSelectStyle}>
+                    {waveOptions}
+                  </select>
+                </label>
+                <label style={oscLblStyle}>
+                  Speed: {roomRadiusOscSpeed.toFixed(2)}
+                  <input type="range" min="0.05" max="3" step="0.05" value={roomRadiusOscSpeed} onChange={(e) => setRoomRadiusOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={oscLblStyle}>
+                  Min: {roomRadiusOscMin}
+                  <input type="range" min="50" max="400" step="10" value={roomRadiusOscMin} onChange={(e) => setRoomRadiusOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {roomRadiusOscMax}
+                  <input type="range" min="50" max="400" step="10" value={roomRadiusOscMax} onChange={(e) => setRoomRadiusOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Room Height Oscillator */}
+            <details style={oscDetStyle}>
+              <summary style={oscSumStyle}>
+                Room Height Oscillator {roomHeightOscEnabled ? "\u2713" : ""}
+              </summary>
+              <div style={oscBodyStyle}>
+                <label style={oscCheckStyle}>
+                  <input type="checkbox" checked={roomHeightOscEnabled} onChange={(e) => setRoomHeightOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={oscLblStyle}>
+                  Function:
+                  <select value={roomHeightOscFunction} onChange={(e) => setRoomHeightOscFunction(e.target.value as WaveFunction)} style={oscSelectStyle}>
+                    {waveOptions}
+                  </select>
+                </label>
+                <label style={oscLblStyle}>
+                  Speed: {roomHeightOscSpeed.toFixed(2)}
+                  <input type="range" min="0.05" max="3" step="0.05" value={roomHeightOscSpeed} onChange={(e) => setRoomHeightOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={oscLblStyle}>
+                  Min: {roomHeightOscMin}
+                  <input type="range" min="50" max="400" step="10" value={roomHeightOscMin} onChange={(e) => setRoomHeightOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {roomHeightOscMax}
+                  <input type="range" min="50" max="400" step="10" value={roomHeightOscMax} onChange={(e) => setRoomHeightOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Tile Scale Oscillator */}
+            <details style={oscDetStyle}>
+              <summary style={oscSumStyle}>
+                Tile Scale Oscillator {tileScaleOscEnabled ? "\u2713" : ""}
+              </summary>
+              <div style={oscBodyStyle}>
+                <label style={oscCheckStyle}>
+                  <input type="checkbox" checked={tileScaleOscEnabled} onChange={(e) => setTileScaleOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={oscLblStyle}>
+                  Function:
+                  <select value={tileScaleOscFunction} onChange={(e) => setTileScaleOscFunction(e.target.value as WaveFunction)} style={oscSelectStyle}>
+                    {waveOptions}
+                  </select>
+                </label>
+                <label style={oscLblStyle}>
+                  Speed: {tileScaleOscSpeed.toFixed(2)}
+                  <input type="range" min="0.05" max="3" step="0.05" value={tileScaleOscSpeed} onChange={(e) => setTileScaleOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={oscLblStyle}>
+                  Min: {tileScaleOscMin.toFixed(1)}
+                  <input type="range" min="2" max="20" step="0.5" value={tileScaleOscMin} onChange={(e) => setTileScaleOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {tileScaleOscMax.toFixed(1)}
+                  <input type="range" min="2" max="20" step="0.5" value={tileScaleOscMax} onChange={(e) => setTileScaleOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Tile Rotation Oscillator */}
+            <details style={oscDetStyle}>
+              <summary style={oscSumStyle}>
+                Tile Rotation Oscillator {tileRotationOscEnabled ? "\u2713" : ""}
+              </summary>
+              <div style={oscBodyStyle}>
+                <label style={oscCheckStyle}>
+                  <input type="checkbox" checked={tileRotationOscEnabled} onChange={(e) => setTileRotationOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={oscLblStyle}>
+                  Function:
+                  <select value={tileRotationOscFunction} onChange={(e) => setTileRotationOscFunction(e.target.value as WaveFunction)} style={oscSelectStyle}>
+                    {waveOptions}
+                  </select>
+                </label>
+                <label style={oscLblStyle}>
+                  Speed: {tileRotationOscSpeed.toFixed(2)}
+                  <input type="range" min="0.05" max="3" step="0.05" value={tileRotationOscSpeed} onChange={(e) => setTileRotationOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={oscLblStyle}>
+                  Min: {Math.round(tileRotationOscMin * 180 / Math.PI)}&deg;
+                  <input type="range" min={-Math.PI} max={Math.PI} step="0.01" value={tileRotationOscMin} onChange={(e) => setTileRotationOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {Math.round(tileRotationOscMax * 180 / Math.PI)}&deg;
+                  <input type="range" min={-Math.PI} max={Math.PI} step="0.01" value={tileRotationOscMax} onChange={(e) => setTileRotationOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
+
+            {/* Room Depth Oscillator */}
+            <details style={oscDetStyle}>
+              <summary style={oscSumStyle}>
+                Room Depth Oscillator {roomDepthOscEnabled ? "\u2713" : ""}
+              </summary>
+              <div style={oscBodyStyle}>
+                <label style={oscCheckStyle}>
+                  <input type="checkbox" checked={roomDepthOscEnabled} onChange={(e) => setRoomDepthOscEnabled(e.target.checked)} />
+                  {" "}Enabled
+                </label>
+                <label style={oscLblStyle}>
+                  Function:
+                  <select value={roomDepthOscFunction} onChange={(e) => setRoomDepthOscFunction(e.target.value as WaveFunction)} style={oscSelectStyle}>
+                    {waveOptions}
+                  </select>
+                </label>
+                <label style={oscLblStyle}>
+                  Speed: {roomDepthOscSpeed.toFixed(2)}
+                  <input type="range" min="0.05" max="3" step="0.05" value={roomDepthOscSpeed} onChange={(e) => setRoomDepthOscSpeed(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={oscLblStyle}>
+                  Min: {roomDepthOscMin}
+                  <input type="range" min="100" max="4000" step="50" value={roomDepthOscMin} onChange={(e) => setRoomDepthOscMin(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+                <label style={{ display: "block", fontSize: "12px" }}>
+                  Max: {roomDepthOscMax}
+                  <input type="range" min="100" max="4000" step="50" value={roomDepthOscMax} onChange={(e) => setRoomDepthOscMax(Number(e.target.value))} style={{ width: "100%", display: "block" }} />
+                </label>
+              </div>
+            </details>
           </div>
         </div>
       )}
@@ -558,9 +985,8 @@ export default function ExpansiveRoom() {
           onClick={() => setShowControls(!showControls)}
           style={{
             position: "absolute",
-            top: showControls ? "auto" : "20px",
-            bottom: showControls ? "20px" : "auto",
-            left: "20px",
+            top: "10px",
+            left: showControls ? "290px" : "10px",
             background: "rgba(0, 0, 0, 0.8)",
             color: "#fff",
             border: "1px solid #444",
@@ -569,9 +995,10 @@ export default function ExpansiveRoom() {
             cursor: "pointer",
             fontSize: "14px",
             zIndex: 10,
+            transition: "left 0.3s ease",
           }}
         >
-          {showControls ? "Hide Controls" : "Show Controls"}
+          {showControls ? "\u2190" : "\u2192"}
         </button>
       )}
     </div>
