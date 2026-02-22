@@ -372,8 +372,8 @@ export default function ExpansiveRoom() {
       0.5,
       5000,
     );
-    camera.position.set(0, 40, 100);
-    camera.lookAt(0, 40, -200);
+    camera.position.set(0, 70, 100);
+    camera.lookAt(0, 70, -200);
     cameraRef.current = camera;
 
     const material = createTileMaterial(hueRef.current, saturationRef.current);
