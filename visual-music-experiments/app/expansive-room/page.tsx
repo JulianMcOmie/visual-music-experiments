@@ -155,12 +155,12 @@ export default function ExpansiveRoom() {
 
   // Expensive params (trigger geometry rebuild) — kept as state
   const [tilingType, setTilingType] = useState(3);
-  const [roomRadius, setRoomRadius] = useState(200);
-  const [roomHeight, setRoomHeight] = useState(200);
+  const [roomRadius, setRoomRadius] = useState(260);
+  const [roomHeight, setRoomHeight] = useState(220);
   const [tileScale, setTileScale] = useState(8);
   const [edgeCurvature, setEdgeCurvature] = useState(0.5);
   const [tileRotation, setTileRotation] = useState(0);
-  const [roomDepth, setRoomDepth] = useState(400);
+  const [roomDepth, setRoomDepth] = useState(500);
 
   // Cheap params (uniform-driven) — refs for instant updates, state for UI display
   const hueRef = useRef(0.58);
@@ -316,17 +316,17 @@ export default function ExpansiveRoom() {
 
   // Base-value refs for expensive params (synced from slider state, used when oscillator is off)
   const tilingTypeBaseRef = useRef(3);
-  const roomRadiusBaseRef = useRef(200);
-  const roomHeightBaseRef = useRef(200);
+  const roomRadiusBaseRef = useRef(260);
+  const roomHeightBaseRef = useRef(220);
   const tileScaleBaseRef = useRef(8);
   const edgeCurvatureBaseRef = useRef(0.5);
   const tileRotationBaseRef = useRef(0);
-  const roomDepthBaseRef = useRef(400);
+  const roomDepthBaseRef = useRef(500);
 
   // Last-rendered values (to detect when rebuild is actually needed)
   const lastRenderedRef = useRef({
-    tilingType: 3, roomRadius: 200, roomHeight: 200,
-    tileScale: 8, edgeCurvature: 0.5, roomDepth: 400,
+    tilingType: 3, roomRadius: 260, roomHeight: 220,
+    tileScale: 8, edgeCurvature: 0.5, roomDepth: 500,
   });
 
   // Refs for Three.js objects
@@ -689,18 +689,23 @@ export default function ExpansiveRoom() {
           </div>
 
           <div style={blockStyle}>
-            <label style={labelStyle}>Hue: {hueDisplay.toFixed(2)}</label>
-            <input type="range" min="0" max="1" step="0.01" value={hueDisplay} onChange={onHueChange} style={{ width: "100%" }} />
-          </div>
-
-          <div style={blockStyle}>
-            <label style={labelStyle}>Room Radius: {roomRadius}</label>
+            <label style={labelStyle}>Room Width: {roomRadius * 2}</label>
             <input type="range" min="50" max="400" step="10" value={roomRadius} onChange={(e) => setRoomRadius(Number(e.target.value))} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
             <label style={labelStyle}>Room Height: {roomHeight}</label>
             <input type="range" min="50" max="400" step="10" value={roomHeight} onChange={(e) => setRoomHeight(Number(e.target.value))} style={{ width: "100%" }} />
+          </div>
+
+          <div style={blockStyle}>
+            <label style={labelStyle}>Room Depth: {roomDepth}</label>
+            <input type="range" min="100" max="4000" step="50" value={roomDepth} onChange={(e) => setRoomDepth(Number(e.target.value))} style={{ width: "100%" }} />
+          </div>
+
+          <div style={blockStyle}>
+            <label style={labelStyle}>Hue: {hueDisplay.toFixed(2)}</label>
+            <input type="range" min="0" max="1" step="0.01" value={hueDisplay} onChange={onHueChange} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
@@ -716,11 +721,6 @@ export default function ExpansiveRoom() {
           <div style={blockStyle}>
             <label style={labelStyle}>Tile Rotation: {Math.round(tileRotation * 180 / Math.PI)}&deg;</label>
             <input type="range" min={-Math.PI} max={Math.PI} step="0.01" value={tileRotation} onChange={(e) => setTileRotation(Number(e.target.value))} style={{ width: "100%" }} />
-          </div>
-
-          <div style={blockStyle}>
-            <label style={labelStyle}>Room Depth: {roomDepth}</label>
-            <input type="range" min="100" max="4000" step="50" value={roomDepth} onChange={(e) => setRoomDepth(Number(e.target.value))} style={{ width: "100%" }} />
           </div>
 
           <div style={blockStyle}>
@@ -822,10 +822,10 @@ export default function ExpansiveRoom() {
               </div>
             </details>
 
-            {/* Room Radius Oscillator */}
+            {/* Room Width Oscillator */}
             <details style={oscDetStyle}>
               <summary style={oscSumStyle}>
-                Room Radius Oscillator {roomRadiusOscEnabled ? "\u2713" : ""}
+                Room Width Oscillator {roomRadiusOscEnabled ? "\u2713" : ""}
               </summary>
               <div style={oscBodyStyle}>
                 <label style={oscCheckStyle}>
