@@ -59,6 +59,32 @@ const selectStyle: React.CSSProperties = {
   fontSize: "12px",
 };
 
+const STORAGE_KEY = "nested-circles-settings";
+
+const DEFAULTS = {
+  depth: 3, childCount: 6, baseRadius: 200, radiusRatio: 0.35,
+  drawOuterCircles: true, drawLeafCircles: true, lineWidth: 1.5,
+  lineWidthOscEnabled: false, lineWidthOscSpeed: 1, lineWidthOscMin: 0.5, lineWidthOscMax: 3, lineWidthOscWave: "sin" as WaveFunction,
+  rotationSpeed: 0.3, alternateDirection: true, rotationWave: "sin" as WaveFunction,
+  rotationOscEnabled: false, rotationOscSpeed: 0.5, rotationOscMin: 0.1, rotationOscMax: 1.0,
+  radiusOscEnabled: false, radiusOscSpeed: 1, radiusOscMin: 0.15, radiusOscMax: 0.5, radiusOscWave: "sin" as WaveFunction, radiusOscByDepth: true,
+  childOscEnabled: false, childOscSpeed: 0.3, childOscMin: 3, childOscMax: 10, childOscWave: "sin" as WaveFunction,
+  visibleChildren: 6, visibleOscEnabled: false, visibleOscSpeed: 0.5, visibleOscMin: 2, visibleOscMax: 6, visibleOscWave: "sin" as WaveFunction,
+  timeDelay: 0, timeDelayOscEnabled: false, timeDelayOscSpeed: 0.3, timeDelayOscMin: 0, timeDelayOscMax: 1.0, timeDelayOscWave: "sin" as WaveFunction,
+  ringDelay: 0, ringDelayOscEnabled: false, ringDelayOscSpeed: 0.3, ringDelayOscMin: 0, ringDelayOscMax: 0.5, ringDelayOscWave: "sin" as WaveFunction,
+  colorPalette: "ocean" as ColorPalette, baseHue: 200, saturation: 70, lightness: 60, opacity: 0.8,
+  hueByDepth: true, hueOscEnabled: false, hueOscSpeed: 0.5,
+};
+
+function loadSettings(): typeof DEFAULTS {
+  if (typeof window === "undefined") return DEFAULTS;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULTS;
+    return { ...DEFAULTS, ...JSON.parse(raw) };
+  } catch { return DEFAULTS; }
+}
+
 export default function NestedCircles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | undefined>(undefined);
@@ -68,96 +94,140 @@ export default function NestedCircles() {
   const [isControlPanelCollapsed, setIsControlPanelCollapsed] = useState(false);
   const [showDebug, setShowDebug] = useState(true);
   const pausedRef = useRef(false);
+  const settingsLoaded = useRef(false);
 
   // Debug info ref (written in animation loop) and state (read by UI on interval)
   const debugInfoRef = useRef({
-    time: 0,
-    fps: 0,
-    depth: 0,
-    children: 0,
-    visibleChildren: 0,
-    radiusRatio: 0,
-    rotationSpeed: 0,
-    rotationAngle: 0,
-    depthDelay: 0,
-    ringDelay: 0,
-    hue: 0,
-    baseRadius: 0,
-    lineWidth: 0,
+    time: 0, fps: 0, depth: 0, children: 0, visibleChildren: 0,
+    radiusRatio: 0, rotationSpeed: 0, rotationAngle: 0,
+    depthDelay: 0, ringDelay: 0, hue: 0, baseRadius: 0, lineWidth: 0,
   });
   const [debugInfo, setDebugInfo] = useState({ ...debugInfoRef.current });
 
   // Structure
-  const [depth, setDepth] = useState(3);
-  const [childCount, setChildCount] = useState(6);
-  const [baseRadius, setBaseRadius] = useState(200);
-  const [radiusRatio, setRadiusRatio] = useState(0.35);
-  const [drawOuterCircles, setDrawOuterCircles] = useState(true);
-  const [drawLeafCircles, setDrawLeafCircles] = useState(true);
-  const [lineWidth, setLineWidth] = useState(1.5);
-  const [lineWidthOscEnabled, setLineWidthOscEnabled] = useState(false);
-  const [lineWidthOscSpeed, setLineWidthOscSpeed] = useState(1);
-  const [lineWidthOscMin, setLineWidthOscMin] = useState(0.5);
-  const [lineWidthOscMax, setLineWidthOscMax] = useState(3);
-  const [lineWidthOscWave, setLineWidthOscWave] = useState<WaveFunction>("sin");
+  const [depth, setDepth] = useState(DEFAULTS.depth);
+  const [childCount, setChildCount] = useState(DEFAULTS.childCount);
+  const [baseRadius, setBaseRadius] = useState(DEFAULTS.baseRadius);
+  const [radiusRatio, setRadiusRatio] = useState(DEFAULTS.radiusRatio);
+  const [drawOuterCircles, setDrawOuterCircles] = useState(DEFAULTS.drawOuterCircles);
+  const [drawLeafCircles, setDrawLeafCircles] = useState(DEFAULTS.drawLeafCircles);
+  const [lineWidth, setLineWidth] = useState(DEFAULTS.lineWidth);
+  const [lineWidthOscEnabled, setLineWidthOscEnabled] = useState(DEFAULTS.lineWidthOscEnabled);
+  const [lineWidthOscSpeed, setLineWidthOscSpeed] = useState(DEFAULTS.lineWidthOscSpeed);
+  const [lineWidthOscMin, setLineWidthOscMin] = useState(DEFAULTS.lineWidthOscMin);
+  const [lineWidthOscMax, setLineWidthOscMax] = useState(DEFAULTS.lineWidthOscMax);
+  const [lineWidthOscWave, setLineWidthOscWave] = useState(DEFAULTS.lineWidthOscWave);
 
   // Rotation
-  const [rotationSpeed, setRotationSpeed] = useState(0.3);
-  const [alternateDirection, setAlternateDirection] = useState(true);
-  const [rotationWave, setRotationWave] = useState<WaveFunction>("sin");
-  const [rotationOscEnabled, setRotationOscEnabled] = useState(false);
-  const [rotationOscSpeed, setRotationOscSpeed] = useState(0.5);
-  const [rotationOscMin, setRotationOscMin] = useState(0.1);
-  const [rotationOscMax, setRotationOscMax] = useState(1.0);
+  const [rotationSpeed, setRotationSpeed] = useState(DEFAULTS.rotationSpeed);
+  const [alternateDirection, setAlternateDirection] = useState(DEFAULTS.alternateDirection);
+  const [rotationWave, setRotationWave] = useState(DEFAULTS.rotationWave);
+  const [rotationOscEnabled, setRotationOscEnabled] = useState(DEFAULTS.rotationOscEnabled);
+  const [rotationOscSpeed, setRotationOscSpeed] = useState(DEFAULTS.rotationOscSpeed);
+  const [rotationOscMin, setRotationOscMin] = useState(DEFAULTS.rotationOscMin);
+  const [rotationOscMax, setRotationOscMax] = useState(DEFAULTS.rotationOscMax);
 
   // Radius oscillation
-  const [radiusOscEnabled, setRadiusOscEnabled] = useState(false);
-  const [radiusOscSpeed, setRadiusOscSpeed] = useState(1);
-  const [radiusOscMin, setRadiusOscMin] = useState(0.15);
-  const [radiusOscMax, setRadiusOscMax] = useState(0.5);
-  const [radiusOscWave, setRadiusOscWave] = useState<WaveFunction>("sin");
-  const [radiusOscByDepth, setRadiusOscByDepth] = useState(true);
+  const [radiusOscEnabled, setRadiusOscEnabled] = useState(DEFAULTS.radiusOscEnabled);
+  const [radiusOscSpeed, setRadiusOscSpeed] = useState(DEFAULTS.radiusOscSpeed);
+  const [radiusOscMin, setRadiusOscMin] = useState(DEFAULTS.radiusOscMin);
+  const [radiusOscMax, setRadiusOscMax] = useState(DEFAULTS.radiusOscMax);
+  const [radiusOscWave, setRadiusOscWave] = useState(DEFAULTS.radiusOscWave);
+  const [radiusOscByDepth, setRadiusOscByDepth] = useState(DEFAULTS.radiusOscByDepth);
 
   // Child count oscillation
-  const [childOscEnabled, setChildOscEnabled] = useState(false);
-  const [childOscSpeed, setChildOscSpeed] = useState(0.3);
-  const [childOscMin, setChildOscMin] = useState(3);
-  const [childOscMax, setChildOscMax] = useState(10);
-  const [childOscWave, setChildOscWave] = useState<WaveFunction>("sin");
+  const [childOscEnabled, setChildOscEnabled] = useState(DEFAULTS.childOscEnabled);
+  const [childOscSpeed, setChildOscSpeed] = useState(DEFAULTS.childOscSpeed);
+  const [childOscMin, setChildOscMin] = useState(DEFAULTS.childOscMin);
+  const [childOscMax, setChildOscMax] = useState(DEFAULTS.childOscMax);
+  const [childOscWave, setChildOscWave] = useState(DEFAULTS.childOscWave);
 
   // Visible children (how many of the positioned children are drawn)
-  const [visibleChildren, setVisibleChildren] = useState(6);
-  const [visibleOscEnabled, setVisibleOscEnabled] = useState(false);
-  const [visibleOscSpeed, setVisibleOscSpeed] = useState(0.5);
-  const [visibleOscMin, setVisibleOscMin] = useState(2);
-  const [visibleOscMax, setVisibleOscMax] = useState(6);
-  const [visibleOscWave, setVisibleOscWave] = useState<WaveFunction>("sin");
+  const [visibleChildren, setVisibleChildren] = useState(DEFAULTS.visibleChildren);
+  const [visibleOscEnabled, setVisibleOscEnabled] = useState(DEFAULTS.visibleOscEnabled);
+  const [visibleOscSpeed, setVisibleOscSpeed] = useState(DEFAULTS.visibleOscSpeed);
+  const [visibleOscMin, setVisibleOscMin] = useState(DEFAULTS.visibleOscMin);
+  const [visibleOscMax, setVisibleOscMax] = useState(DEFAULTS.visibleOscMax);
+  const [visibleOscWave, setVisibleOscWave] = useState(DEFAULTS.visibleOscWave);
 
   // Time delay — depth (ripples from innermost depth outward)
-  const [timeDelay, setTimeDelay] = useState(0);
-  const [timeDelayOscEnabled, setTimeDelayOscEnabled] = useState(false);
-  const [timeDelayOscSpeed, setTimeDelayOscSpeed] = useState(0.3);
-  const [timeDelayOscMin, setTimeDelayOscMin] = useState(0);
-  const [timeDelayOscMax, setTimeDelayOscMax] = useState(1.0);
-  const [timeDelayOscWave, setTimeDelayOscWave] = useState<WaveFunction>("sin");
+  const [timeDelay, setTimeDelay] = useState(DEFAULTS.timeDelay);
+  const [timeDelayOscEnabled, setTimeDelayOscEnabled] = useState(DEFAULTS.timeDelayOscEnabled);
+  const [timeDelayOscSpeed, setTimeDelayOscSpeed] = useState(DEFAULTS.timeDelayOscSpeed);
+  const [timeDelayOscMin, setTimeDelayOscMin] = useState(DEFAULTS.timeDelayOscMin);
+  const [timeDelayOscMax, setTimeDelayOscMax] = useState(DEFAULTS.timeDelayOscMax);
+  const [timeDelayOscWave, setTimeDelayOscWave] = useState(DEFAULTS.timeDelayOscWave);
 
   // Time delay — ring (each child in a ring is offset by index)
-  const [ringDelay, setRingDelay] = useState(0);
-  const [ringDelayOscEnabled, setRingDelayOscEnabled] = useState(false);
-  const [ringDelayOscSpeed, setRingDelayOscSpeed] = useState(0.3);
-  const [ringDelayOscMin, setRingDelayOscMin] = useState(0);
-  const [ringDelayOscMax, setRingDelayOscMax] = useState(0.5);
-  const [ringDelayOscWave, setRingDelayOscWave] = useState<WaveFunction>("sin");
+  const [ringDelay, setRingDelay] = useState(DEFAULTS.ringDelay);
+  const [ringDelayOscEnabled, setRingDelayOscEnabled] = useState(DEFAULTS.ringDelayOscEnabled);
+  const [ringDelayOscSpeed, setRingDelayOscSpeed] = useState(DEFAULTS.ringDelayOscSpeed);
+  const [ringDelayOscMin, setRingDelayOscMin] = useState(DEFAULTS.ringDelayOscMin);
+  const [ringDelayOscMax, setRingDelayOscMax] = useState(DEFAULTS.ringDelayOscMax);
+  const [ringDelayOscWave, setRingDelayOscWave] = useState(DEFAULTS.ringDelayOscWave);
 
   // Color
-  const [colorPalette, setColorPalette] = useState<ColorPalette>("ocean");
-  const [baseHue, setBaseHue] = useState(200);
-  const [saturation, setSaturation] = useState(70);
-  const [lightness, setLightness] = useState(60);
-  const [opacity, setOpacity] = useState(0.8);
-  const [hueByDepth, setHueByDepth] = useState(true);
-  const [hueOscEnabled, setHueOscEnabled] = useState(false);
-  const [hueOscSpeed, setHueOscSpeed] = useState(0.5);
+  const [colorPalette, setColorPalette] = useState(DEFAULTS.colorPalette);
+  const [baseHue, setBaseHue] = useState(DEFAULTS.baseHue);
+  const [saturation, setSaturation] = useState(DEFAULTS.saturation);
+  const [lightness, setLightness] = useState(DEFAULTS.lightness);
+  const [opacity, setOpacity] = useState(DEFAULTS.opacity);
+  const [hueByDepth, setHueByDepth] = useState(DEFAULTS.hueByDepth);
+  const [hueOscEnabled, setHueOscEnabled] = useState(DEFAULTS.hueOscEnabled);
+  const [hueOscSpeed, setHueOscSpeed] = useState(DEFAULTS.hueOscSpeed);
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const s = loadSettings();
+    setDepth(s.depth); setChildCount(s.childCount); setBaseRadius(s.baseRadius); setRadiusRatio(s.radiusRatio);
+    setDrawOuterCircles(s.drawOuterCircles); setDrawLeafCircles(s.drawLeafCircles); setLineWidth(s.lineWidth);
+    setLineWidthOscEnabled(s.lineWidthOscEnabled); setLineWidthOscSpeed(s.lineWidthOscSpeed);
+    setLineWidthOscMin(s.lineWidthOscMin); setLineWidthOscMax(s.lineWidthOscMax); setLineWidthOscWave(s.lineWidthOscWave);
+    setRotationSpeed(s.rotationSpeed); setAlternateDirection(s.alternateDirection); setRotationWave(s.rotationWave);
+    setRotationOscEnabled(s.rotationOscEnabled); setRotationOscSpeed(s.rotationOscSpeed);
+    setRotationOscMin(s.rotationOscMin); setRotationOscMax(s.rotationOscMax);
+    setRadiusOscEnabled(s.radiusOscEnabled); setRadiusOscSpeed(s.radiusOscSpeed);
+    setRadiusOscMin(s.radiusOscMin); setRadiusOscMax(s.radiusOscMax); setRadiusOscWave(s.radiusOscWave); setRadiusOscByDepth(s.radiusOscByDepth);
+    setChildOscEnabled(s.childOscEnabled); setChildOscSpeed(s.childOscSpeed);
+    setChildOscMin(s.childOscMin); setChildOscMax(s.childOscMax); setChildOscWave(s.childOscWave);
+    setVisibleChildren(s.visibleChildren); setVisibleOscEnabled(s.visibleOscEnabled); setVisibleOscSpeed(s.visibleOscSpeed);
+    setVisibleOscMin(s.visibleOscMin); setVisibleOscMax(s.visibleOscMax); setVisibleOscWave(s.visibleOscWave);
+    setTimeDelay(s.timeDelay); setTimeDelayOscEnabled(s.timeDelayOscEnabled); setTimeDelayOscSpeed(s.timeDelayOscSpeed);
+    setTimeDelayOscMin(s.timeDelayOscMin); setTimeDelayOscMax(s.timeDelayOscMax); setTimeDelayOscWave(s.timeDelayOscWave);
+    setRingDelay(s.ringDelay); setRingDelayOscEnabled(s.ringDelayOscEnabled); setRingDelayOscSpeed(s.ringDelayOscSpeed);
+    setRingDelayOscMin(s.ringDelayOscMin); setRingDelayOscMax(s.ringDelayOscMax); setRingDelayOscWave(s.ringDelayOscWave);
+    setColorPalette(s.colorPalette); setBaseHue(s.baseHue); setSaturation(s.saturation);
+    setLightness(s.lightness); setOpacity(s.opacity); setHueByDepth(s.hueByDepth);
+    setHueOscEnabled(s.hueOscEnabled); setHueOscSpeed(s.hueOscSpeed);
+    settingsLoaded.current = true;
+  }, []);
+
+  // Save settings to localStorage on change
+  useEffect(() => {
+    if (!settingsLoaded.current) return;
+    const settings = {
+      depth, childCount, baseRadius, radiusRatio, drawOuterCircles, drawLeafCircles, lineWidth,
+      lineWidthOscEnabled, lineWidthOscSpeed, lineWidthOscMin, lineWidthOscMax, lineWidthOscWave,
+      rotationSpeed, alternateDirection, rotationWave, rotationOscEnabled, rotationOscSpeed, rotationOscMin, rotationOscMax,
+      radiusOscEnabled, radiusOscSpeed, radiusOscMin, radiusOscMax, radiusOscWave, radiusOscByDepth,
+      childOscEnabled, childOscSpeed, childOscMin, childOscMax, childOscWave,
+      visibleChildren, visibleOscEnabled, visibleOscSpeed, visibleOscMin, visibleOscMax, visibleOscWave,
+      timeDelay, timeDelayOscEnabled, timeDelayOscSpeed, timeDelayOscMin, timeDelayOscMax, timeDelayOscWave,
+      ringDelay, ringDelayOscEnabled, ringDelayOscSpeed, ringDelayOscMin, ringDelayOscMax, ringDelayOscWave,
+      colorPalette, baseHue, saturation, lightness, opacity, hueByDepth, hueOscEnabled, hueOscSpeed,
+    };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch {}
+  }, [
+    depth, childCount, baseRadius, radiusRatio, drawOuterCircles, drawLeafCircles, lineWidth,
+    lineWidthOscEnabled, lineWidthOscSpeed, lineWidthOscMin, lineWidthOscMax, lineWidthOscWave,
+    rotationSpeed, alternateDirection, rotationWave, rotationOscEnabled, rotationOscSpeed, rotationOscMin, rotationOscMax,
+    radiusOscEnabled, radiusOscSpeed, radiusOscMin, radiusOscMax, radiusOscWave, radiusOscByDepth,
+    childOscEnabled, childOscSpeed, childOscMin, childOscMax, childOscWave,
+    visibleChildren, visibleOscEnabled, visibleOscSpeed, visibleOscMin, visibleOscMax, visibleOscWave,
+    timeDelay, timeDelayOscEnabled, timeDelayOscSpeed, timeDelayOscMin, timeDelayOscMax, timeDelayOscWave,
+    ringDelay, ringDelayOscEnabled, ringDelayOscSpeed, ringDelayOscMin, ringDelayOscMax, ringDelayOscWave,
+    colorPalette, baseHue, saturation, lightness, opacity, hueByDepth, hueOscEnabled, hueOscSpeed,
+  ]);
 
   // Store refs for animation loop
   const depthRef = useRef(depth);
