@@ -83,6 +83,7 @@ export default function NestedCircles() {
     ringDelay: 0,
     hue: 0,
     baseRadius: 0,
+    lineWidth: 0,
   });
   const [debugInfo, setDebugInfo] = useState({ ...debugInfoRef.current });
 
@@ -94,6 +95,11 @@ export default function NestedCircles() {
   const [drawOuterCircles, setDrawOuterCircles] = useState(true);
   const [drawLeafCircles, setDrawLeafCircles] = useState(true);
   const [lineWidth, setLineWidth] = useState(1.5);
+  const [lineWidthOscEnabled, setLineWidthOscEnabled] = useState(false);
+  const [lineWidthOscSpeed, setLineWidthOscSpeed] = useState(1);
+  const [lineWidthOscMin, setLineWidthOscMin] = useState(0.5);
+  const [lineWidthOscMax, setLineWidthOscMax] = useState(3);
+  const [lineWidthOscWave, setLineWidthOscWave] = useState<WaveFunction>("sin");
 
   // Rotation
   const [rotationSpeed, setRotationSpeed] = useState(0.3);
@@ -161,6 +167,11 @@ export default function NestedCircles() {
   const drawOuterCirclesRef = useRef(drawOuterCircles);
   const drawLeafCirclesRef = useRef(drawLeafCircles);
   const lineWidthRef = useRef(lineWidth);
+  const lineWidthOscEnabledRef = useRef(lineWidthOscEnabled);
+  const lineWidthOscSpeedRef = useRef(lineWidthOscSpeed);
+  const lineWidthOscMinRef = useRef(lineWidthOscMin);
+  const lineWidthOscMaxRef = useRef(lineWidthOscMax);
+  const lineWidthOscWaveRef = useRef(lineWidthOscWave);
   const rotationSpeedRef = useRef(rotationSpeed);
   const alternateDirectionRef = useRef(alternateDirection);
   const rotationWaveRef = useRef(rotationWave);
@@ -214,6 +225,11 @@ export default function NestedCircles() {
   useEffect(() => { drawOuterCirclesRef.current = drawOuterCircles; }, [drawOuterCircles]);
   useEffect(() => { drawLeafCirclesRef.current = drawLeafCircles; }, [drawLeafCircles]);
   useEffect(() => { lineWidthRef.current = lineWidth; }, [lineWidth]);
+  useEffect(() => { lineWidthOscEnabledRef.current = lineWidthOscEnabled; }, [lineWidthOscEnabled]);
+  useEffect(() => { lineWidthOscSpeedRef.current = lineWidthOscSpeed; }, [lineWidthOscSpeed]);
+  useEffect(() => { lineWidthOscMinRef.current = lineWidthOscMin; }, [lineWidthOscMin]);
+  useEffect(() => { lineWidthOscMaxRef.current = lineWidthOscMax; }, [lineWidthOscMax]);
+  useEffect(() => { lineWidthOscWaveRef.current = lineWidthOscWave; }, [lineWidthOscWave]);
   useEffect(() => { rotationSpeedRef.current = rotationSpeed; }, [rotationSpeed]);
   useEffect(() => { alternateDirectionRef.current = alternateDirection; }, [alternateDirection]);
   useEffect(() => { rotationWaveRef.current = rotationWave; }, [rotationWave]);
@@ -343,19 +359,32 @@ export default function NestedCircles() {
       const l = lightnessRef.current - currentDepth * 5;
       const a = opacityRef.current;
 
+      // Line width — oscillate between min and max
+      let lw = lineWidthRef.current;
+      if (lineWidthOscEnabledRef.current) {
+        const lwWave = waveFunctions[lineWidthOscWaveRef.current];
+        const norm = (lwWave(t * lineWidthOscSpeedRef.current) + 1) / 2;
+        lw = lineWidthOscMinRef.current + norm * (lineWidthOscMaxRef.current - lineWidthOscMinRef.current);
+      }
+
+      // Write debug for line width at root level
+      if (currentDepth === 0) {
+        debugInfoRef.current.lineWidth = lw;
+      }
+
       // Draw this circle
       const isLeaf = currentDepth >= maxDepth;
       if (isLeaf && drawLeafCirclesRef.current) {
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.strokeStyle = `hsla(${hue}, ${s}%, ${Math.max(l, 20)}%, ${a})`;
-        ctx.lineWidth = lineWidthRef.current;
+        ctx.lineWidth = lw;
         ctx.stroke();
       } else if (!isLeaf && drawOuterCirclesRef.current) {
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.strokeStyle = `hsla(${hue}, ${s}%, ${Math.max(l, 20)}%, ${a * 0.5})`;
-        ctx.lineWidth = lineWidthRef.current;
+        ctx.lineWidth = lw;
         ctx.stroke();
       }
 
@@ -545,6 +574,9 @@ export default function NestedCircles() {
           <div style={{ fontSize: "11px", opacity: radiusOscEnabled ? 1 : 0.4 }}>
             Radius Ratio: {debugInfo.radiusRatio.toFixed(3)}
           </div>
+          <div style={{ fontSize: "11px", opacity: lineWidthOscEnabled ? 1 : 0.4 }}>
+            Line Width: {debugInfo.lineWidth.toFixed(2)}
+          </div>
           <div style={{ fontSize: "11px", opacity: hueOscEnabled ? 1 : 0.4 }}>
             Hue: {debugInfo.hue.toFixed(0)}°
           </div>
@@ -643,7 +675,12 @@ export default function NestedCircles() {
           <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
             Line Width: {lineWidth.toFixed(1)}
           </label>
-          <input type="range" min={0.5} max={4} step={0.1} value={lineWidth} onChange={(e) => setLineWidth(+e.target.value)} style={{ width: "100%", cursor: "pointer" }} />
+          <input
+            type="range" min={0.5} max={10} step={0.1} value={lineWidth}
+            onChange={(e) => setLineWidth(+e.target.value)}
+            disabled={lineWidthOscEnabled}
+            style={{ width: "100%", cursor: lineWidthOscEnabled ? "not-allowed" : "pointer", opacity: lineWidthOscEnabled ? 0.5 : 1 }}
+          />
         </div>
 
         <div style={{ marginBottom: "20px" }}>
@@ -971,6 +1008,35 @@ export default function NestedCircles() {
               <div>
                 <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Max: {ringDelayOscMax.toFixed(2)}s</label>
                 <input type="range" min={0} max={2} step={0.01} value={ringDelayOscMax} onChange={(e) => setRingDelayOscMax(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ borderTop: "1px solid #444", paddingTop: "20px", marginTop: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={lineWidthOscEnabled} onChange={(e) => setLineWidthOscEnabled(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Enable Line Width Oscillation
+          </label>
+          {lineWidthOscEnabled && (
+            <div style={{ marginTop: "12px", paddingLeft: "16px" }}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Function</label>
+                <select value={lineWidthOscWave} onChange={(e) => setLineWidthOscWave(e.target.value as WaveFunction)} style={{ width: "100%", padding: "4px", borderRadius: "4px", background: "#222", color: "#fff", border: "1px solid #444" }}>
+                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Speed: {lineWidthOscSpeed.toFixed(2)}</label>
+                <input type="range" min={0.05} max={5} step={0.05} value={lineWidthOscSpeed} onChange={(e) => setLineWidthOscSpeed(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Min: {lineWidthOscMin.toFixed(1)}</label>
+                <input type="range" min={0} max={10} step={0.1} value={lineWidthOscMin} onChange={(e) => setLineWidthOscMin(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Max: {lineWidthOscMax.toFixed(1)}</label>
+                <input type="range" min={0} max={10} step={0.1} value={lineWidthOscMax} onChange={(e) => setLineWidthOscMax(+e.target.value)} style={{ width: "100%" }} />
               </div>
             </div>
           )}
