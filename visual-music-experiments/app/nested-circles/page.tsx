@@ -416,7 +416,7 @@ export default function NestedCircles() {
             <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Structure</div>
 
             <div style={labelStyle}><span>Depth</span><span>{depth}</span></div>
-            <input type="range" min={1} max={5} step={1} value={depth} onChange={(e) => setDepth(+e.target.value)} style={sliderStyle} />
+            <input type="range" min={1} max={10} step={1} value={depth} onChange={(e) => setDepth(+e.target.value)} style={sliderStyle} />
 
             <div style={labelStyle}><span>Children per ring</span><span>{childCount}</span></div>
             <input type="range" min={2} max={12} step={1} value={childCount} onChange={(e) => setChildCount(+e.target.value)} style={sliderStyle} />
