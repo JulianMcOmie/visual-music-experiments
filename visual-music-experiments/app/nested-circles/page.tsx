@@ -66,7 +66,25 @@ export default function NestedCircles() {
   const lastFrameRef = useRef(0);
   const [isPreview, setIsPreview] = useState(false);
   const [isControlPanelCollapsed, setIsControlPanelCollapsed] = useState(false);
+  const [showDebug, setShowDebug] = useState(true);
   const pausedRef = useRef(false);
+
+  // Debug info ref (written in animation loop) and state (read by UI on interval)
+  const debugInfoRef = useRef({
+    time: 0,
+    fps: 0,
+    depth: 0,
+    children: 0,
+    visibleChildren: 0,
+    radiusRatio: 0,
+    rotationSpeed: 0,
+    rotationAngle: 0,
+    depthDelay: 0,
+    ringDelay: 0,
+    hue: 0,
+    baseRadius: 0,
+  });
+  const [debugInfo, setDebugInfo] = useState({ ...debugInfoRef.current });
 
   // Structure
   const [depth, setDepth] = useState(3);
@@ -258,6 +276,14 @@ export default function NestedCircles() {
     return () => window.removeEventListener("message", handler);
   }, [isPreview]);
 
+  // Update debug display from ref on interval
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDebugInfo({ ...debugInfoRef.current });
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
+
   // Animation
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -292,6 +318,13 @@ export default function NestedCircles() {
       const depthFromInner = maxDepth - currentDepth;
       // t = base time, offset by depth delay + accumulated ring offsets
       const t = globalT - depthDelay * depthFromInner - ringOffset;
+
+      // Write debug info at root level
+      if (currentDepth === 0) {
+        debugInfoRef.current.depthDelay = depthDelay;
+        debugInfoRef.current.depth = maxDepth;
+        debugInfoRef.current.baseRadius = radius;
+      }
 
       const paletteFunc = colorPalettes[colorPaletteRef.current];
 
@@ -354,6 +387,14 @@ export default function NestedCircles() {
         ringDel = ringDelayOscMinRef.current + norm * (ringDelayOscMaxRef.current - ringDelayOscMinRef.current);
       }
 
+      // Write debug info at root level
+      if (currentDepth === 0) {
+        debugInfoRef.current.children = children;
+        debugInfoRef.current.visibleChildren = visible;
+        debugInfoRef.current.ringDelay = ringDel;
+        debugInfoRef.current.hue = baseHueRef.current;
+      }
+
       for (let i = 0; i < children; i++) {
         if (i >= visible) continue;
 
@@ -383,6 +424,13 @@ export default function NestedCircles() {
         const dir = alternateDirectionRef.current ? (currentDepth % 2 === 0 ? 1 : -1) : 1;
         const rotAngle = t * speed * dir;
 
+        // Write debug for first child at root level
+        if (currentDepth === 0 && i === 0) {
+          debugInfoRef.current.radiusRatio = ratio;
+          debugInfoRef.current.rotationSpeed = speed;
+          debugInfoRef.current.rotationAngle = rotAngle;
+        }
+
         // Distance from center to child centers
         const orbitRadius = radius - childRadius;
 
@@ -402,6 +450,9 @@ export default function NestedCircles() {
       if (!pausedRef.current) {
         timeRef.current += delta;
       }
+
+      debugInfoRef.current.time = timeRef.current;
+      debugInfoRef.current.fps = delta > 0 ? Math.round(1 / delta) : 0;
 
       ctx.fillStyle = "#0a0a0a";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -426,6 +477,89 @@ export default function NestedCircles() {
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden", background: "#0a0a0a" }}>
       <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
+
+      {/* Debug toggle */}
+      {!isPreview && (
+        <button
+          onClick={() => setShowDebug(!showDebug)}
+          style={{
+            position: "absolute",
+            top: "10px",
+            right: "10px",
+            zIndex: 1000,
+            background: "rgba(0, 0, 0, 0.8)",
+            color: "#66ccff",
+            border: "1px solid rgba(102, 204, 255, 0.3)",
+            borderRadius: "4px",
+            padding: "6px 10px",
+            cursor: "pointer",
+            fontSize: "12px",
+            fontFamily: "monospace",
+          }}
+          title={showDebug ? "Hide Debug Info" : "Show Debug Info"}
+        >
+          {showDebug ? "▼" : "▶"} Debug
+        </button>
+      )}
+
+      {/* Debug panel */}
+      {!isPreview && showDebug && (
+        <div
+          style={{
+            position: "absolute",
+            top: "50px",
+            right: "20px",
+            minWidth: "200px",
+            background: "rgba(0, 0, 0, 0.7)",
+            color: "#66ccff",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            fontFamily: "monospace",
+            fontSize: "12px",
+            lineHeight: "1.6",
+            border: "1px solid rgba(102, 204, 255, 0.3)",
+          }}
+        >
+          <div style={{ color: debugInfo.fps < 30 ? "#ff4444" : debugInfo.fps < 50 ? "#ffaa44" : "#66ccff" }}>
+            FPS: {debugInfo.fps}
+          </div>
+          <div>Time: {debugInfo.time.toFixed(2)}s</div>
+
+          <div style={{ borderTop: "1px solid rgba(102, 204, 255, 0.2)", marginTop: "8px", paddingTop: "8px", fontWeight: "bold", color: "#ffdd66" }}>
+            Structure
+          </div>
+          <div style={{ fontSize: "11px" }}>Depth: {debugInfo.depth}</div>
+          <div style={{ fontSize: "11px" }}>Children: {debugInfo.children}</div>
+          <div style={{ fontSize: "11px" }}>Visible: {debugInfo.visibleChildren}</div>
+          <div style={{ fontSize: "11px" }}>Base Radius: {debugInfo.baseRadius}</div>
+
+          <div style={{ borderTop: "1px solid rgba(102, 204, 255, 0.2)", marginTop: "8px", paddingTop: "8px", fontWeight: "bold", color: "#88ff88" }}>
+            Oscillator Values
+          </div>
+          <div style={{ fontSize: "11px", opacity: rotationOscEnabled ? 1 : 0.4 }}>
+            Rotation: {debugInfo.rotationSpeed.toFixed(3)} rad/s
+          </div>
+          <div style={{ fontSize: "11px", opacity: rotationOscEnabled ? 1 : 0.4 }}>
+            Rot Angle: {(debugInfo.rotationAngle * 180 / Math.PI).toFixed(1)}°
+          </div>
+          <div style={{ fontSize: "11px", opacity: radiusOscEnabled ? 1 : 0.4 }}>
+            Radius Ratio: {debugInfo.radiusRatio.toFixed(3)}
+          </div>
+          <div style={{ fontSize: "11px", opacity: hueOscEnabled ? 1 : 0.4 }}>
+            Hue: {debugInfo.hue.toFixed(0)}°
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(102, 204, 255, 0.2)", marginTop: "8px", paddingTop: "8px", fontWeight: "bold", color: "#ff8888" }}>
+            Time Delays
+          </div>
+          <div style={{ fontSize: "11px", opacity: timeDelay > 0 || timeDelayOscEnabled ? 1 : 0.4 }}>
+            Depth Delay: {debugInfo.depthDelay.toFixed(3)}s
+          </div>
+          <div style={{ fontSize: "11px", opacity: ringDelay > 0 || ringDelayOscEnabled ? 1 : 0.4 }}>
+            Ring Delay: {debugInfo.ringDelay.toFixed(3)}s
+          </div>
+        </div>
+      )}
 
       {!isPreview && (
       <div
