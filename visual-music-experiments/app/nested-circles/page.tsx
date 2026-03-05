@@ -85,12 +85,13 @@ export default function NestedCircles() {
   const [rotationOscMin, setRotationOscMin] = useState(0.1);
   const [rotationOscMax, setRotationOscMax] = useState(1.0);
 
-  // Pulsing (radius oscillation)
-  const [pulseEnabled, setPulseEnabled] = useState(false);
-  const [pulseSpeed, setPulseSpeed] = useState(1);
-  const [pulseAmount, setPulseAmount] = useState(0.2);
-  const [pulseWave, setPulseWave] = useState<WaveFunction>("sin");
-  const [pulseByDepth, setPulseByDepth] = useState(true);
+  // Radius oscillation
+  const [radiusOscEnabled, setRadiusOscEnabled] = useState(false);
+  const [radiusOscSpeed, setRadiusOscSpeed] = useState(1);
+  const [radiusOscMin, setRadiusOscMin] = useState(0.15);
+  const [radiusOscMax, setRadiusOscMax] = useState(0.5);
+  const [radiusOscWave, setRadiusOscWave] = useState<WaveFunction>("sin");
+  const [radiusOscByDepth, setRadiusOscByDepth] = useState(true);
 
   // Child count oscillation
   const [childOscEnabled, setChildOscEnabled] = useState(false);
@@ -140,11 +141,12 @@ export default function NestedCircles() {
   const rotationOscSpeedRef = useRef(rotationOscSpeed);
   const rotationOscMinRef = useRef(rotationOscMin);
   const rotationOscMaxRef = useRef(rotationOscMax);
-  const pulseEnabledRef = useRef(pulseEnabled);
-  const pulseSpeedRef = useRef(pulseSpeed);
-  const pulseAmountRef = useRef(pulseAmount);
-  const pulseWaveRef = useRef(pulseWave);
-  const pulseByDepthRef = useRef(pulseByDepth);
+  const radiusOscEnabledRef = useRef(radiusOscEnabled);
+  const radiusOscSpeedRef = useRef(radiusOscSpeed);
+  const radiusOscMinRef = useRef(radiusOscMin);
+  const radiusOscMaxRef = useRef(radiusOscMax);
+  const radiusOscWaveRef = useRef(radiusOscWave);
+  const radiusOscByDepthRef = useRef(radiusOscByDepth);
   const childOscEnabledRef = useRef(childOscEnabled);
   const childOscSpeedRef = useRef(childOscSpeed);
   const childOscMinRef = useRef(childOscMin);
@@ -186,11 +188,12 @@ export default function NestedCircles() {
   useEffect(() => { rotationOscSpeedRef.current = rotationOscSpeed; }, [rotationOscSpeed]);
   useEffect(() => { rotationOscMinRef.current = rotationOscMin; }, [rotationOscMin]);
   useEffect(() => { rotationOscMaxRef.current = rotationOscMax; }, [rotationOscMax]);
-  useEffect(() => { pulseEnabledRef.current = pulseEnabled; }, [pulseEnabled]);
-  useEffect(() => { pulseSpeedRef.current = pulseSpeed; }, [pulseSpeed]);
-  useEffect(() => { pulseAmountRef.current = pulseAmount; }, [pulseAmount]);
-  useEffect(() => { pulseWaveRef.current = pulseWave; }, [pulseWave]);
-  useEffect(() => { pulseByDepthRef.current = pulseByDepth; }, [pulseByDepth]);
+  useEffect(() => { radiusOscEnabledRef.current = radiusOscEnabled; }, [radiusOscEnabled]);
+  useEffect(() => { radiusOscSpeedRef.current = radiusOscSpeed; }, [radiusOscSpeed]);
+  useEffect(() => { radiusOscMinRef.current = radiusOscMin; }, [radiusOscMin]);
+  useEffect(() => { radiusOscMaxRef.current = radiusOscMax; }, [radiusOscMax]);
+  useEffect(() => { radiusOscWaveRef.current = radiusOscWave; }, [radiusOscWave]);
+  useEffect(() => { radiusOscByDepthRef.current = radiusOscByDepth; }, [radiusOscByDepth]);
   useEffect(() => { childOscEnabledRef.current = childOscEnabled; }, [childOscEnabled]);
   useEffect(() => { childOscSpeedRef.current = childOscSpeed; }, [childOscSpeed]);
   useEffect(() => { childOscMinRef.current = childOscMin; }, [childOscMin]);
@@ -321,16 +324,15 @@ export default function NestedCircles() {
       }
       visible = Math.max(1, Math.min(visible, children));
 
-      // Child circle radius
-      let childRadius = radius * radiusRatioRef.current;
-
-      // Apply pulse
-      if (pulseEnabledRef.current) {
-        const pWave = waveFunctions[pulseWaveRef.current];
-        const phaseOffset = pulseByDepthRef.current ? currentDepth * 0.8 : 0;
-        const pulse = pWave(t * pulseSpeedRef.current + phaseOffset);
-        childRadius *= 1 + pulse * pulseAmountRef.current;
+      // Child circle radius — oscillate the ratio between min and max
+      let ratio = radiusRatioRef.current;
+      if (radiusOscEnabledRef.current) {
+        const rWave = waveFunctions[radiusOscWaveRef.current];
+        const phaseOffset = radiusOscByDepthRef.current ? currentDepth * 0.8 : 0;
+        const norm = (rWave(t * radiusOscSpeedRef.current + phaseOffset) + 1) / 2;
+        ratio = radiusOscMinRef.current + norm * (radiusOscMaxRef.current - radiusOscMinRef.current);
       }
+      let childRadius = radius * ratio;
 
       // Rotation for this depth level
       let speed = rotationSpeedRef.current;
@@ -472,26 +474,28 @@ export default function NestedCircles() {
             )}
           </div>
 
-          {/* Pulse */}
+          {/* Radius Oscillation */}
           <div style={sectionStyle}>
-            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Pulse</div>
+            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Radius Oscillation</div>
 
             <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={pulseEnabled} onChange={(e) => setPulseEnabled(e.target.checked)} />
-              Enable pulse
+              <input type="checkbox" checked={radiusOscEnabled} onChange={(e) => setRadiusOscEnabled(e.target.checked)} />
+              Enable radius oscillation
             </label>
-            {pulseEnabled && (
+            {radiusOscEnabled && (
               <>
                 <div style={labelStyle}><span>Wave</span></div>
-                <select value={pulseWave} onChange={(e) => setPulseWave(e.target.value as WaveFunction)} style={selectStyle}>
+                <select value={radiusOscWave} onChange={(e) => setRadiusOscWave(e.target.value as WaveFunction)} style={selectStyle}>
                   {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
                 </select>
-                <div style={labelStyle}><span>Speed</span><span>{pulseSpeed.toFixed(2)}</span></div>
-                <input type="range" min={0.1} max={5} step={0.1} value={pulseSpeed} onChange={(e) => setPulseSpeed(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Amount</span><span>{pulseAmount.toFixed(2)}</span></div>
-                <input type="range" min={0} max={0.5} step={0.01} value={pulseAmount} onChange={(e) => setPulseAmount(+e.target.value)} style={sliderStyle} />
+                <div style={labelStyle}><span>Speed</span><span>{radiusOscSpeed.toFixed(2)}</span></div>
+                <input type="range" min={0.05} max={5} step={0.05} value={radiusOscSpeed} onChange={(e) => setRadiusOscSpeed(+e.target.value)} style={sliderStyle} />
+                <div style={labelStyle}><span>Min ratio</span><span>{radiusOscMin.toFixed(2)}</span></div>
+                <input type="range" min={0.05} max={0.6} step={0.01} value={radiusOscMin} onChange={(e) => setRadiusOscMin(+e.target.value)} style={sliderStyle} />
+                <div style={labelStyle}><span>Max ratio</span><span>{radiusOscMax.toFixed(2)}</span></div>
+                <input type="range" min={0.05} max={0.6} step={0.01} value={radiusOscMax} onChange={(e) => setRadiusOscMax(+e.target.value)} style={sliderStyle} />
                 <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-                  <input type="checkbox" checked={pulseByDepth} onChange={(e) => setPulseByDepth(e.target.checked)} />
+                  <input type="checkbox" checked={radiusOscByDepth} onChange={(e) => setRadiusOscByDepth(e.target.checked)} />
                   Phase offset by depth
                 </label>
               </>
