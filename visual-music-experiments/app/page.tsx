@@ -65,6 +65,14 @@ const projects = [
     bgColor: "#020208",
     snapshot: "/snapshots/expansive-room.png",
   },
+  {
+    title: "Nested Circles",
+    href: "/nested-circles",
+    description: "Fractal circles within circles within circles — recursive ring patterns with rotating, pulsing, and color-shifting oscillators.",
+    color: "#44ccdd",
+    bgColor: "#0a0a0a",
+    snapshot: "/snapshots/nested-circles.png",
+  },
 ];
 
 export default function Gallery() {
