@@ -65,6 +65,7 @@ export default function NestedCircles() {
   const timeRef = useRef(0);
   const lastFrameRef = useRef(0);
   const [isPreview, setIsPreview] = useState(false);
+  const [isControlPanelCollapsed, setIsControlPanelCollapsed] = useState(false);
   const pausedRef = useRef(false);
 
   // Structure
@@ -427,258 +428,422 @@ export default function NestedCircles() {
       <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "100%" }} />
 
       {!isPreview && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            bottom: 0,
-            width: "280px",
-            background: "rgba(0,0,0,0.7)",
-            backdropFilter: "blur(10px)",
-            padding: "16px",
-            overflowY: "auto",
-            color: "#fff",
-            fontSize: "12px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-          }}
-        >
-          <h2 style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 500 }}>Nested Circles</h2>
-
-          {/* Structure */}
-          <div style={sectionStyle}>
-            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Structure</div>
-
-            <div style={labelStyle}><span>Depth</span><span>{depth}</span></div>
-            <input type="range" min={1} max={10} step={1} value={depth} onChange={(e) => setDepth(+e.target.value)} style={sliderStyle} />
-
-            <div style={labelStyle}><span>Children per ring</span><span>{childCount}</span></div>
-            <input type="range" min={2} max={12} step={1} value={childCount} onChange={(e) => setChildCount(+e.target.value)} style={sliderStyle} />
-
-            <div style={labelStyle}><span>Base radius</span><span>{baseRadius}</span></div>
-            <input type="range" min={50} max={500} step={10} value={baseRadius} onChange={(e) => setBaseRadius(+e.target.value)} style={sliderStyle} />
-
-            <div style={labelStyle}><span>Radius ratio</span><span>{radiusRatio.toFixed(2)}</span></div>
-            <input type="range" min={0.1} max={0.6} step={0.01} value={radiusRatio} onChange={(e) => setRadiusRatio(+e.target.value)} style={sliderStyle} />
-
-            <div style={labelStyle}><span>Line width</span><span>{lineWidth.toFixed(1)}</span></div>
-            <input type="range" min={0.5} max={4} step={0.1} value={lineWidth} onChange={(e) => setLineWidth(+e.target.value)} style={sliderStyle} />
-
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={drawOuterCircles} onChange={(e) => setDrawOuterCircles(e.target.checked)} />
-              Draw outer circles
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={drawLeafCircles} onChange={(e) => setDrawLeafCircles(e.target.checked)} />
-              Draw leaf circles
-            </label>
+      <div
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: "20px",
+          background: "rgba(0, 0, 0, 0.7)",
+          padding: "20px",
+          borderRadius: "8px",
+          width: "250px",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <div style={{ marginBottom: isControlPanelCollapsed ? "0" : "20px", paddingBottom: isControlPanelCollapsed ? "0" : "15px", borderBottom: isControlPanelCollapsed ? "none" : "1px solid #444", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <a href="/" style={{ fontSize: "12px", color: "#4488ff", textDecoration: "none" }}>← Gallery</a>
+            <h2 style={{ margin: "8px 0 0 0", fontSize: "18px", color: "#fff" }}>
+              Nested Circles
+            </h2>
           </div>
+          <button
+            onClick={() => setIsControlPanelCollapsed(!isControlPanelCollapsed)}
+            style={{
+              background: "transparent",
+              border: "1px solid #555",
+              borderRadius: "4px",
+              color: "#fff",
+              cursor: "pointer",
+              fontSize: "16px",
+              padding: "4px 8px",
+              marginLeft: "10px",
+            }}
+            title={isControlPanelCollapsed ? "Expand controls" : "Collapse controls"}
+          >
+            {isControlPanelCollapsed ? "▼" : "▲"}
+          </button>
+        </div>
 
-          {/* Rotation */}
-          <div style={sectionStyle}>
-            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Rotation</div>
+        {!isControlPanelCollapsed && (
+        <>
+        {/* Structure */}
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Depth: {depth}
+          </label>
+          <input type="range" min={1} max={10} step={1} value={depth} onChange={(e) => setDepth(+e.target.value)} style={{ width: "100%", cursor: "pointer" }} />
+        </div>
 
-            <div style={labelStyle}><span>Speed</span><span>{rotationSpeed.toFixed(2)}</span></div>
-            <input type="range" min={0} max={3} step={0.01} value={rotationSpeed} onChange={(e) => setRotationSpeed(+e.target.value)} style={sliderStyle} />
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Children per Ring: {childCount}
+          </label>
+          <input type="range" min={2} max={12} step={1} value={childCount} onChange={(e) => setChildCount(+e.target.value)} style={{ width: "100%", cursor: "pointer" }} />
+        </div>
 
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={alternateDirection} onChange={(e) => setAlternateDirection(e.target.checked)} />
-              Alternate direction per depth
-            </label>
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Base Radius: {baseRadius}
+          </label>
+          <input type="range" min={50} max={500} step={10} value={baseRadius} onChange={(e) => setBaseRadius(+e.target.value)} style={{ width: "100%", cursor: "pointer" }} />
+        </div>
 
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer", marginTop: "4px" }}>
-              <input type="checkbox" checked={rotationOscEnabled} onChange={(e) => setRotationOscEnabled(e.target.checked)} />
-              Oscillate speed
-            </label>
-            {rotationOscEnabled && (
-              <>
-                <div style={labelStyle}><span>Wave</span></div>
-                <select value={rotationWave} onChange={(e) => setRotationWave(e.target.value as WaveFunction)} style={selectStyle}>
-                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
-                </select>
-                <div style={labelStyle}><span>Osc speed</span><span>{rotationOscSpeed.toFixed(2)}</span></div>
-                <input type="range" min={0.01} max={3} step={0.01} value={rotationOscSpeed} onChange={(e) => setRotationOscSpeed(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Min</span><span>{rotationOscMin.toFixed(2)}</span></div>
-                <input type="range" min={0} max={3} step={0.01} value={rotationOscMin} onChange={(e) => setRotationOscMin(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Max</span><span>{rotationOscMax.toFixed(2)}</span></div>
-                <input type="range" min={0} max={3} step={0.01} value={rotationOscMax} onChange={(e) => setRotationOscMax(+e.target.value)} style={sliderStyle} />
-              </>
-            )}
-          </div>
-
-          {/* Radius Oscillation */}
-          <div style={sectionStyle}>
-            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Radius Oscillation</div>
-
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={radiusOscEnabled} onChange={(e) => setRadiusOscEnabled(e.target.checked)} />
-              Enable radius oscillation
-            </label>
-            {radiusOscEnabled && (
-              <>
-                <div style={labelStyle}><span>Wave</span></div>
-                <select value={radiusOscWave} onChange={(e) => setRadiusOscWave(e.target.value as WaveFunction)} style={selectStyle}>
-                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
-                </select>
-                <div style={labelStyle}><span>Speed</span><span>{radiusOscSpeed.toFixed(2)}</span></div>
-                <input type="range" min={0.05} max={5} step={0.05} value={radiusOscSpeed} onChange={(e) => setRadiusOscSpeed(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Min ratio</span><span>{radiusOscMin.toFixed(2)}</span></div>
-                <input type="range" min={0.05} max={0.6} step={0.01} value={radiusOscMin} onChange={(e) => setRadiusOscMin(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Max ratio</span><span>{radiusOscMax.toFixed(2)}</span></div>
-                <input type="range" min={0.05} max={0.6} step={0.01} value={radiusOscMax} onChange={(e) => setRadiusOscMax(+e.target.value)} style={sliderStyle} />
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-                  <input type="checkbox" checked={radiusOscByDepth} onChange={(e) => setRadiusOscByDepth(e.target.checked)} />
-                  Phase offset by depth
-                </label>
-              </>
-            )}
-          </div>
-
-          {/* Child count oscillation */}
-          <div style={sectionStyle}>
-            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Child Count Oscillation</div>
-
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={childOscEnabled} onChange={(e) => setChildOscEnabled(e.target.checked)} />
-              Oscillate child count
-            </label>
-            {childOscEnabled && (
-              <>
-                <div style={labelStyle}><span>Wave</span></div>
-                <select value={childOscWave} onChange={(e) => setChildOscWave(e.target.value as WaveFunction)} style={selectStyle}>
-                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
-                </select>
-                <div style={labelStyle}><span>Speed</span><span>{childOscSpeed.toFixed(2)}</span></div>
-                <input type="range" min={0.05} max={3} step={0.05} value={childOscSpeed} onChange={(e) => setChildOscSpeed(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Min</span><span>{childOscMin}</span></div>
-                <input type="range" min={2} max={12} step={1} value={childOscMin} onChange={(e) => setChildOscMin(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Max</span><span>{childOscMax}</span></div>
-                <input type="range" min={2} max={12} step={1} value={childOscMax} onChange={(e) => setChildOscMax(+e.target.value)} style={sliderStyle} />
-              </>
-            )}
-          </div>
-
-          {/* Visible Children */}
-          <div style={sectionStyle}>
-            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Visible Children</div>
-
-            <div style={labelStyle}><span>Visible</span><span>{visibleChildren}</span></div>
-            <input type="range" min={1} max={12} step={1} value={visibleChildren} onChange={(e) => setVisibleChildren(+e.target.value)} style={sliderStyle} />
-
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={visibleOscEnabled} onChange={(e) => setVisibleOscEnabled(e.target.checked)} />
-              Oscillate visible count
-            </label>
-            {visibleOscEnabled && (
-              <>
-                <div style={labelStyle}><span>Wave</span></div>
-                <select value={visibleOscWave} onChange={(e) => setVisibleOscWave(e.target.value as WaveFunction)} style={selectStyle}>
-                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
-                </select>
-                <div style={labelStyle}><span>Speed</span><span>{visibleOscSpeed.toFixed(2)}</span></div>
-                <input type="range" min={0.05} max={3} step={0.05} value={visibleOscSpeed} onChange={(e) => setVisibleOscSpeed(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Min</span><span>{visibleOscMin}</span></div>
-                <input type="range" min={1} max={12} step={1} value={visibleOscMin} onChange={(e) => setVisibleOscMin(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Max</span><span>{visibleOscMax}</span></div>
-                <input type="range" min={1} max={12} step={1} value={visibleOscMax} onChange={(e) => setVisibleOscMax(+e.target.value)} style={sliderStyle} />
-              </>
-            )}
-          </div>
-
-          {/* Time Delay */}
-          <div style={sectionStyle}>
-            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Time Delay (Inner → Outer)</div>
-
-            <div style={labelStyle}><span>Delay</span><span>{timeDelay.toFixed(2)}s</span></div>
-            <input type="range" min={0} max={2} step={0.01} value={timeDelay} onChange={(e) => setTimeDelay(+e.target.value)} style={sliderStyle} />
-
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={timeDelayOscEnabled} onChange={(e) => setTimeDelayOscEnabled(e.target.checked)} />
-              Oscillate delay
-            </label>
-            {timeDelayOscEnabled && (
-              <>
-                <div style={labelStyle}><span>Wave</span></div>
-                <select value={timeDelayOscWave} onChange={(e) => setTimeDelayOscWave(e.target.value as WaveFunction)} style={selectStyle}>
-                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
-                </select>
-                <div style={labelStyle}><span>Speed</span><span>{timeDelayOscSpeed.toFixed(2)}</span></div>
-                <input type="range" min={0.05} max={3} step={0.05} value={timeDelayOscSpeed} onChange={(e) => setTimeDelayOscSpeed(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Min</span><span>{timeDelayOscMin.toFixed(2)}s</span></div>
-                <input type="range" min={0} max={2} step={0.01} value={timeDelayOscMin} onChange={(e) => setTimeDelayOscMin(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Max</span><span>{timeDelayOscMax.toFixed(2)}s</span></div>
-                <input type="range" min={0} max={2} step={0.01} value={timeDelayOscMax} onChange={(e) => setTimeDelayOscMax(+e.target.value)} style={sliderStyle} />
-              </>
-            )}
-          </div>
-
-          {/* Ring Time Delay */}
-          <div style={sectionStyle}>
-            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Ring Time Delay</div>
-
-            <div style={labelStyle}><span>Delay</span><span>{ringDelay.toFixed(2)}s</span></div>
-            <input type="range" min={0} max={2} step={0.01} value={ringDelay} onChange={(e) => setRingDelay(+e.target.value)} style={sliderStyle} />
-
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={ringDelayOscEnabled} onChange={(e) => setRingDelayOscEnabled(e.target.checked)} />
-              Oscillate delay
-            </label>
-            {ringDelayOscEnabled && (
-              <>
-                <div style={labelStyle}><span>Wave</span></div>
-                <select value={ringDelayOscWave} onChange={(e) => setRingDelayOscWave(e.target.value as WaveFunction)} style={selectStyle}>
-                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
-                </select>
-                <div style={labelStyle}><span>Speed</span><span>{ringDelayOscSpeed.toFixed(2)}</span></div>
-                <input type="range" min={0.05} max={3} step={0.05} value={ringDelayOscSpeed} onChange={(e) => setRingDelayOscSpeed(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Min</span><span>{ringDelayOscMin.toFixed(2)}s</span></div>
-                <input type="range" min={0} max={2} step={0.01} value={ringDelayOscMin} onChange={(e) => setRingDelayOscMin(+e.target.value)} style={sliderStyle} />
-                <div style={labelStyle}><span>Max</span><span>{ringDelayOscMax.toFixed(2)}s</span></div>
-                <input type="range" min={0} max={2} step={0.01} value={ringDelayOscMax} onChange={(e) => setRingDelayOscMax(+e.target.value)} style={sliderStyle} />
-              </>
-            )}
-          </div>
-
-          {/* Color */}
-          <div style={sectionStyle}>
-            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Color</div>
-
-            <div style={labelStyle}><span>Palette</span></div>
-            <select value={colorPalette} onChange={(e) => setColorPalette(e.target.value as ColorPalette)} style={selectStyle}>
-              {paletteNames.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-
-            <div style={labelStyle}><span>Base hue</span><span>{baseHue}</span></div>
-            <input type="range" min={0} max={360} step={1} value={baseHue} onChange={(e) => setBaseHue(+e.target.value)} style={sliderStyle} />
-
-            <div style={labelStyle}><span>Saturation</span><span>{saturation}%</span></div>
-            <input type="range" min={0} max={100} step={1} value={saturation} onChange={(e) => setSaturation(+e.target.value)} style={sliderStyle} />
-
-            <div style={labelStyle}><span>Lightness</span><span>{lightness}%</span></div>
-            <input type="range" min={10} max={90} step={1} value={lightness} onChange={(e) => setLightness(+e.target.value)} style={sliderStyle} />
-
-            <div style={labelStyle}><span>Opacity</span><span>{opacity.toFixed(2)}</span></div>
-            <input type="range" min={0.1} max={1} step={0.05} value={opacity} onChange={(e) => setOpacity(+e.target.value)} style={sliderStyle} />
-
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={hueByDepth} onChange={(e) => setHueByDepth(e.target.checked)} />
-              Color by depth (vs. by index)
-            </label>
-
-            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
-              <input type="checkbox" checked={hueOscEnabled} onChange={(e) => setHueOscEnabled(e.target.checked)} />
-              Oscillate hue
-            </label>
-            {hueOscEnabled && (
-              <>
-                <div style={labelStyle}><span>Hue osc speed</span><span>{hueOscSpeed.toFixed(2)}</span></div>
-                <input type="range" min={0.05} max={3} step={0.05} value={hueOscSpeed} onChange={(e) => setHueOscSpeed(+e.target.value)} style={sliderStyle} />
-              </>
-            )}
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Radius Ratio: {radiusRatio.toFixed(2)}
+          </label>
+          <input
+            type="range" min={0.1} max={0.6} step={0.01} value={radiusRatio}
+            onChange={(e) => setRadiusRatio(+e.target.value)}
+            disabled={radiusOscEnabled}
+            style={{ width: "100%", cursor: radiusOscEnabled ? "not-allowed" : "pointer", opacity: radiusOscEnabled ? 0.5 : 1 }}
+          />
+          <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+            Child circle size relative to parent
           </div>
         </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Line Width: {lineWidth.toFixed(1)}
+          </label>
+          <input type="range" min={0.5} max={4} step={0.1} value={lineWidth} onChange={(e) => setLineWidth(+e.target.value)} style={{ width: "100%", cursor: "pointer" }} />
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={drawOuterCircles} onChange={(e) => setDrawOuterCircles(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Draw Outer Circles
+          </label>
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={drawLeafCircles} onChange={(e) => setDrawLeafCircles(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Draw Leaf Circles
+          </label>
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Rotation Speed: {rotationSpeed.toFixed(2)}
+          </label>
+          <input
+            type="range" min={0} max={3} step={0.01} value={rotationSpeed}
+            onChange={(e) => setRotationSpeed(+e.target.value)}
+            disabled={rotationOscEnabled}
+            style={{ width: "100%", cursor: rotationOscEnabled ? "not-allowed" : "pointer", opacity: rotationOscEnabled ? 0.5 : 1 }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={alternateDirection} onChange={(e) => setAlternateDirection(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Alternate Direction per Depth
+          </label>
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Visible Children: {visibleChildren}
+          </label>
+          <input
+            type="range" min={1} max={12} step={1} value={visibleChildren}
+            onChange={(e) => setVisibleChildren(+e.target.value)}
+            disabled={visibleOscEnabled}
+            style={{ width: "100%", cursor: visibleOscEnabled ? "not-allowed" : "pointer", opacity: visibleOscEnabled ? 0.5 : 1 }}
+          />
+          <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+            How many children in each ring are drawn
+          </div>
+        </div>
+
+        {/* Color */}
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Color Palette
+          </label>
+          <select
+            value={colorPalette}
+            onChange={(e) => setColorPalette(e.target.value as ColorPalette)}
+            style={{ width: "100%", padding: "8px", borderRadius: "4px", background: "#222", color: "#fff", border: "1px solid #444", cursor: "pointer" }}
+          >
+            {paletteNames.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Hue: {baseHue}°
+          </label>
+          <input
+            type="range" min={0} max={360} step={1} value={baseHue}
+            onChange={(e) => setBaseHue(+e.target.value)}
+            disabled={hueOscEnabled}
+            style={{ width: "100%", cursor: hueOscEnabled ? "not-allowed" : "pointer", opacity: hueOscEnabled ? 0.5 : 1 }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Saturation: {saturation}%
+          </label>
+          <input type="range" min={0} max={100} step={1} value={saturation} onChange={(e) => setSaturation(+e.target.value)} style={{ width: "100%", cursor: "pointer" }} />
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Lightness: {lightness}%
+          </label>
+          <input type="range" min={10} max={90} step={1} value={lightness} onChange={(e) => setLightness(+e.target.value)} style={{ width: "100%", cursor: "pointer" }} />
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Opacity: {opacity.toFixed(2)}
+          </label>
+          <input type="range" min={0.1} max={1} step={0.05} value={opacity} onChange={(e) => setOpacity(+e.target.value)} style={{ width: "100%", cursor: "pointer" }} />
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={hueByDepth} onChange={(e) => setHueByDepth(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Color by Depth
+          </label>
+          <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+            Colors vary by depth level vs. ring index
+          </div>
+        </div>
+
+        {/* Depth Time Delay */}
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Depth Time Delay: {timeDelay.toFixed(2)}s
+          </label>
+          <input
+            type="range" min={0} max={2} step={0.01} value={timeDelay}
+            onChange={(e) => setTimeDelay(+e.target.value)}
+            disabled={timeDelayOscEnabled}
+            style={{ width: "100%", cursor: timeDelayOscEnabled ? "not-allowed" : "pointer", opacity: timeDelayOscEnabled ? 0.5 : 1 }}
+          />
+          <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+            Time offset between depth levels (inner leads)
+          </div>
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#fff" }}>
+            Ring Time Delay: {ringDelay.toFixed(2)}s
+          </label>
+          <input
+            type="range" min={0} max={2} step={0.01} value={ringDelay}
+            onChange={(e) => setRingDelay(+e.target.value)}
+            disabled={ringDelayOscEnabled}
+            style={{ width: "100%", cursor: ringDelayOscEnabled ? "not-allowed" : "pointer", opacity: ringDelayOscEnabled ? 0.5 : 1 }}
+          />
+          <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+            Time offset between children within each ring
+          </div>
+        </div>
+
+        {/* Oscillator sections */}
+        <div style={{ borderTop: "1px solid #444", paddingTop: "20px", marginTop: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={rotationOscEnabled} onChange={(e) => setRotationOscEnabled(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Enable Rotation Oscillation
+          </label>
+          {rotationOscEnabled && (
+            <div style={{ marginTop: "12px", paddingLeft: "16px" }}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Function</label>
+                <select value={rotationWave} onChange={(e) => setRotationWave(e.target.value as WaveFunction)} style={{ width: "100%", padding: "4px", borderRadius: "4px", background: "#222", color: "#fff", border: "1px solid #444" }}>
+                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Speed: {rotationOscSpeed.toFixed(2)}</label>
+                <input type="range" min={0.01} max={3} step={0.01} value={rotationOscSpeed} onChange={(e) => setRotationOscSpeed(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Min: {rotationOscMin.toFixed(2)}</label>
+                <input type="range" min={0} max={3} step={0.01} value={rotationOscMin} onChange={(e) => setRotationOscMin(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Max: {rotationOscMax.toFixed(2)}</label>
+                <input type="range" min={0} max={3} step={0.01} value={rotationOscMax} onChange={(e) => setRotationOscMax(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ borderTop: "1px solid #444", paddingTop: "20px", marginTop: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={radiusOscEnabled} onChange={(e) => setRadiusOscEnabled(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Enable Radius Oscillation
+          </label>
+          {radiusOscEnabled && (
+            <div style={{ marginTop: "12px", paddingLeft: "16px" }}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Function</label>
+                <select value={radiusOscWave} onChange={(e) => setRadiusOscWave(e.target.value as WaveFunction)} style={{ width: "100%", padding: "4px", borderRadius: "4px", background: "#222", color: "#fff", border: "1px solid #444" }}>
+                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Speed: {radiusOscSpeed.toFixed(2)}</label>
+                <input type="range" min={0.05} max={5} step={0.05} value={radiusOscSpeed} onChange={(e) => setRadiusOscSpeed(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Min Ratio: {radiusOscMin.toFixed(2)}</label>
+                <input type="range" min={0.05} max={0.6} step={0.01} value={radiusOscMin} onChange={(e) => setRadiusOscMin(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Max Ratio: {radiusOscMax.toFixed(2)}</label>
+                <input type="range" min={0.05} max={0.6} step={0.01} value={radiusOscMax} onChange={(e) => setRadiusOscMax(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <label style={{ display: "flex", alignItems: "center", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
+                <input type="checkbox" checked={radiusOscByDepth} onChange={(e) => setRadiusOscByDepth(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+                Phase offset by depth
+              </label>
+            </div>
+          )}
+        </div>
+
+        <div style={{ borderTop: "1px solid #444", paddingTop: "20px", marginTop: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={childOscEnabled} onChange={(e) => setChildOscEnabled(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Enable Child Count Oscillation
+          </label>
+          {childOscEnabled && (
+            <div style={{ marginTop: "12px", paddingLeft: "16px" }}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Function</label>
+                <select value={childOscWave} onChange={(e) => setChildOscWave(e.target.value as WaveFunction)} style={{ width: "100%", padding: "4px", borderRadius: "4px", background: "#222", color: "#fff", border: "1px solid #444" }}>
+                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Speed: {childOscSpeed.toFixed(2)}</label>
+                <input type="range" min={0.05} max={3} step={0.05} value={childOscSpeed} onChange={(e) => setChildOscSpeed(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Min: {childOscMin}</label>
+                <input type="range" min={2} max={12} step={1} value={childOscMin} onChange={(e) => setChildOscMin(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Max: {childOscMax}</label>
+                <input type="range" min={2} max={12} step={1} value={childOscMax} onChange={(e) => setChildOscMax(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ borderTop: "1px solid #444", paddingTop: "20px", marginTop: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={visibleOscEnabled} onChange={(e) => setVisibleOscEnabled(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Enable Visible Count Oscillation
+          </label>
+          {visibleOscEnabled && (
+            <div style={{ marginTop: "12px", paddingLeft: "16px" }}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Function</label>
+                <select value={visibleOscWave} onChange={(e) => setVisibleOscWave(e.target.value as WaveFunction)} style={{ width: "100%", padding: "4px", borderRadius: "4px", background: "#222", color: "#fff", border: "1px solid #444" }}>
+                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Speed: {visibleOscSpeed.toFixed(2)}</label>
+                <input type="range" min={0.05} max={3} step={0.05} value={visibleOscSpeed} onChange={(e) => setVisibleOscSpeed(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Min: {visibleOscMin}</label>
+                <input type="range" min={1} max={12} step={1} value={visibleOscMin} onChange={(e) => setVisibleOscMin(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Max: {visibleOscMax}</label>
+                <input type="range" min={1} max={12} step={1} value={visibleOscMax} onChange={(e) => setVisibleOscMax(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ borderTop: "1px solid #444", paddingTop: "20px", marginTop: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={hueOscEnabled} onChange={(e) => setHueOscEnabled(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Enable Hue Oscillation
+          </label>
+          {hueOscEnabled && (
+            <div style={{ marginTop: "12px", paddingLeft: "16px" }}>
+              <div>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Speed: {hueOscSpeed.toFixed(2)}</label>
+                <input type="range" min={0.05} max={3} step={0.05} value={hueOscSpeed} onChange={(e) => setHueOscSpeed(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ borderTop: "1px solid #444", paddingTop: "20px", marginTop: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={timeDelayOscEnabled} onChange={(e) => setTimeDelayOscEnabled(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Enable Depth Delay Oscillation
+          </label>
+          {timeDelayOscEnabled && (
+            <div style={{ marginTop: "12px", paddingLeft: "16px" }}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Function</label>
+                <select value={timeDelayOscWave} onChange={(e) => setTimeDelayOscWave(e.target.value as WaveFunction)} style={{ width: "100%", padding: "4px", borderRadius: "4px", background: "#222", color: "#fff", border: "1px solid #444" }}>
+                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Speed: {timeDelayOscSpeed.toFixed(2)}</label>
+                <input type="range" min={0.05} max={3} step={0.05} value={timeDelayOscSpeed} onChange={(e) => setTimeDelayOscSpeed(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Min: {timeDelayOscMin.toFixed(2)}s</label>
+                <input type="range" min={0} max={2} step={0.01} value={timeDelayOscMin} onChange={(e) => setTimeDelayOscMin(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Max: {timeDelayOscMax.toFixed(2)}s</label>
+                <input type="range" min={0} max={2} step={0.01} value={timeDelayOscMax} onChange={(e) => setTimeDelayOscMax(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ borderTop: "1px solid #444", paddingTop: "20px", marginTop: "20px" }}>
+          <label style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={ringDelayOscEnabled} onChange={(e) => setRingDelayOscEnabled(e.target.checked)} style={{ marginRight: "8px", cursor: "pointer" }} />
+            Enable Ring Delay Oscillation
+          </label>
+          {ringDelayOscEnabled && (
+            <div style={{ marginTop: "12px", paddingLeft: "16px" }}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Function</label>
+                <select value={ringDelayOscWave} onChange={(e) => setRingDelayOscWave(e.target.value as WaveFunction)} style={{ width: "100%", padding: "4px", borderRadius: "4px", background: "#222", color: "#fff", border: "1px solid #444" }}>
+                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Speed: {ringDelayOscSpeed.toFixed(2)}</label>
+                <input type="range" min={0.05} max={3} step={0.05} value={ringDelayOscSpeed} onChange={(e) => setRingDelayOscSpeed(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Min: {ringDelayOscMin.toFixed(2)}s</label>
+                <input type="range" min={0} max={2} step={0.01} value={ringDelayOscMin} onChange={(e) => setRingDelayOscMin(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", color: "#aaa" }}>Max: {ringDelayOscMax.toFixed(2)}s</label>
+                <input type="range" min={0} max={2} step={0.01} value={ringDelayOscMax} onChange={(e) => setRingDelayOscMax(+e.target.value)} style={{ width: "100%" }} />
+              </div>
+            </div>
+          )}
+        </div>
+        </>
+        )}
+      </div>
       )}
     </div>
   );
