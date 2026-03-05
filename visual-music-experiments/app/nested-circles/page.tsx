@@ -354,43 +354,42 @@ export default function NestedCircles() {
       }
       visible = Math.max(1, Math.min(visible, children));
 
-      // Ring delay: each child gets its own time offset within this ring
+      // Child circle radius — oscillate the ratio between min and max
+      let ratio = radiusRatioRef.current;
+      if (radiusOscEnabledRef.current) {
+        const rWave = waveFunctions[radiusOscWaveRef.current];
+        const phaseOffset = radiusOscByDepthRef.current ? currentDepth * 0.8 : 0;
+        const norm = (rWave(t * radiusOscSpeedRef.current + phaseOffset) + 1) / 2;
+        ratio = radiusOscMinRef.current + norm * (radiusOscMaxRef.current - radiusOscMinRef.current);
+      }
+      const childRadius = radius * ratio;
+
+      // Rotation for this depth level
+      let speed = rotationSpeedRef.current;
+      if (rotationOscEnabledRef.current) {
+        const rWave = waveFunctions[rotationWaveRef.current];
+        const norm = (rWave(t * rotationOscSpeedRef.current) + 1) / 2;
+        speed = rotationOscMinRef.current + norm * (rotationOscMaxRef.current - rotationOscMinRef.current);
+      }
+      const dir = alternateDirectionRef.current ? (currentDepth % 2 === 0 ? 1 : -1) : 1;
+      const rotAngle = t * speed * dir;
+
+      // Distance from center to child centers
+      const orbitRadius = radius - childRadius;
+
+      // Ring delay: offset globalT per child so each subtree runs at a different time
       const ringDel = getRingDelay(globalT);
 
       for (let i = 0; i < children; i++) {
         if (i >= visible) continue;
 
-        // Per-child time with ring delay applied
-        const childT = t - ringDel * (children > 1 ? i / (children - 1) : 0);
-
-        // Child circle radius — oscillate the ratio between min and max
-        let ratio = radiusRatioRef.current;
-        if (radiusOscEnabledRef.current) {
-          const rWave = waveFunctions[radiusOscWaveRef.current];
-          const phaseOffset = radiusOscByDepthRef.current ? currentDepth * 0.8 : 0;
-          const norm = (rWave(childT * radiusOscSpeedRef.current + phaseOffset) + 1) / 2;
-          ratio = radiusOscMinRef.current + norm * (radiusOscMaxRef.current - radiusOscMinRef.current);
-        }
-        const childRadius = radius * ratio;
-
-        // Rotation for this depth level
-        let speed = rotationSpeedRef.current;
-        if (rotationOscEnabledRef.current) {
-          const rWave = waveFunctions[rotationWaveRef.current];
-          const norm = (rWave(childT * rotationOscSpeedRef.current) + 1) / 2;
-          speed = rotationOscMinRef.current + norm * (rotationOscMaxRef.current - rotationOscMinRef.current);
-        }
-        const dir = alternateDirectionRef.current ? (currentDepth % 2 === 0 ? 1 : -1) : 1;
-        const rotAngle = childT * speed * dir;
-
-        // Distance from center to child centers
-        const orbitRadius = radius - childRadius;
-
         const angle = rotAngle + (i / children) * Math.PI * 2;
         const childCx = cx + Math.cos(angle) * orbitRadius;
         const childCy = cy + Math.sin(angle) * orbitRadius;
 
-        drawNestedCircles(childCx, childCy, childRadius, currentDepth + 1, maxDepth, globalT, i);
+        // Pass offset globalT so the entire child subtree is time-shifted
+        const childGlobalT = globalT - ringDel * (children > 1 ? i / (children - 1) : 0);
+        drawNestedCircles(childCx, childCy, childRadius, currentDepth + 1, maxDepth, childGlobalT, i);
       }
     };
 
