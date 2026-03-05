@@ -108,13 +108,21 @@ export default function NestedCircles() {
   const [visibleOscMax, setVisibleOscMax] = useState(6);
   const [visibleOscWave, setVisibleOscWave] = useState<WaveFunction>("sin");
 
-  // Time delay (ripples from innermost depth outward)
+  // Time delay — depth (ripples from innermost depth outward)
   const [timeDelay, setTimeDelay] = useState(0);
   const [timeDelayOscEnabled, setTimeDelayOscEnabled] = useState(false);
   const [timeDelayOscSpeed, setTimeDelayOscSpeed] = useState(0.3);
   const [timeDelayOscMin, setTimeDelayOscMin] = useState(0);
   const [timeDelayOscMax, setTimeDelayOscMax] = useState(1.0);
   const [timeDelayOscWave, setTimeDelayOscWave] = useState<WaveFunction>("sin");
+
+  // Time delay — ring (each child in a ring is offset by index)
+  const [ringDelay, setRingDelay] = useState(0);
+  const [ringDelayOscEnabled, setRingDelayOscEnabled] = useState(false);
+  const [ringDelayOscSpeed, setRingDelayOscSpeed] = useState(0.3);
+  const [ringDelayOscMin, setRingDelayOscMin] = useState(0);
+  const [ringDelayOscMax, setRingDelayOscMax] = useState(0.5);
+  const [ringDelayOscWave, setRingDelayOscWave] = useState<WaveFunction>("sin");
 
   // Color
   const [colorPalette, setColorPalette] = useState<ColorPalette>("ocean");
@@ -164,6 +172,12 @@ export default function NestedCircles() {
   const timeDelayOscMinRef = useRef(timeDelayOscMin);
   const timeDelayOscMaxRef = useRef(timeDelayOscMax);
   const timeDelayOscWaveRef = useRef(timeDelayOscWave);
+  const ringDelayRef = useRef(ringDelay);
+  const ringDelayOscEnabledRef = useRef(ringDelayOscEnabled);
+  const ringDelayOscSpeedRef = useRef(ringDelayOscSpeed);
+  const ringDelayOscMinRef = useRef(ringDelayOscMin);
+  const ringDelayOscMaxRef = useRef(ringDelayOscMax);
+  const ringDelayOscWaveRef = useRef(ringDelayOscWave);
   const colorPaletteRef = useRef(colorPalette);
   const baseHueRef = useRef(baseHue);
   const saturationRef = useRef(saturation);
@@ -211,6 +225,12 @@ export default function NestedCircles() {
   useEffect(() => { timeDelayOscMinRef.current = timeDelayOscMin; }, [timeDelayOscMin]);
   useEffect(() => { timeDelayOscMaxRef.current = timeDelayOscMax; }, [timeDelayOscMax]);
   useEffect(() => { timeDelayOscWaveRef.current = timeDelayOscWave; }, [timeDelayOscWave]);
+  useEffect(() => { ringDelayRef.current = ringDelay; }, [ringDelay]);
+  useEffect(() => { ringDelayOscEnabledRef.current = ringDelayOscEnabled; }, [ringDelayOscEnabled]);
+  useEffect(() => { ringDelayOscSpeedRef.current = ringDelayOscSpeed; }, [ringDelayOscSpeed]);
+  useEffect(() => { ringDelayOscMinRef.current = ringDelayOscMin; }, [ringDelayOscMin]);
+  useEffect(() => { ringDelayOscMaxRef.current = ringDelayOscMax; }, [ringDelayOscMax]);
+  useEffect(() => { ringDelayOscWaveRef.current = ringDelayOscWave; }, [ringDelayOscWave]);
   useEffect(() => { colorPaletteRef.current = colorPalette; }, [colorPalette]);
   useEffect(() => { baseHueRef.current = baseHue; }, [baseHue]);
   useEffect(() => { saturationRef.current = saturation; }, [saturation]);
@@ -259,17 +279,27 @@ export default function NestedCircles() {
       maxDepth: number,
       globalT: number,
       parentIndex: number,
+      ringIndex: number,
+      ringTotal: number,
     ) => {
-      // Time delay: innermost circles lead, rippling outward
-      // Deepest depth (maxDepth) uses globalT, shallower levels are delayed
-      let delay = timeDelayRef.current;
+      // Time delay — depth: innermost circles lead, rippling outward
+      let depthDelay = timeDelayRef.current;
       if (timeDelayOscEnabledRef.current) {
         const dWave = waveFunctions[timeDelayOscWaveRef.current];
         const norm = (dWave(globalT * timeDelayOscSpeedRef.current) + 1) / 2;
-        delay = timeDelayOscMinRef.current + norm * (timeDelayOscMaxRef.current - timeDelayOscMinRef.current);
+        depthDelay = timeDelayOscMinRef.current + norm * (timeDelayOscMaxRef.current - timeDelayOscMinRef.current);
       }
       const depthFromInner = maxDepth - currentDepth;
-      const t = globalT - delay * depthFromInner;
+
+      // Time delay — ring: each child in a ring offset by its index
+      let rDelay = ringDelayRef.current;
+      if (ringDelayOscEnabledRef.current) {
+        const rWave = waveFunctions[ringDelayOscWaveRef.current];
+        const norm = (rWave(globalT * ringDelayOscSpeedRef.current) + 1) / 2;
+        rDelay = ringDelayOscMinRef.current + norm * (ringDelayOscMaxRef.current - ringDelayOscMinRef.current);
+      }
+
+      const t = globalT - depthDelay * depthFromInner - rDelay * (ringTotal > 1 ? ringIndex / (ringTotal - 1) : 0);
 
       const paletteFunc = colorPalettes[colorPaletteRef.current];
 
@@ -354,7 +384,7 @@ export default function NestedCircles() {
 
         // Only recurse/draw if this child is visible
         if (i < visible) {
-          drawNestedCircles(childCx, childCy, childRadius, currentDepth + 1, maxDepth, globalT, i);
+          drawNestedCircles(childCx, childCy, childRadius, currentDepth + 1, maxDepth, globalT, i, i, children);
         }
       }
     };
@@ -375,7 +405,7 @@ export default function NestedCircles() {
       const centerY = canvas.height / 2;
       const t = timeRef.current;
 
-      drawNestedCircles(centerX, centerY, baseRadiusRef.current, 0, depthRef.current, t, 0);
+      drawNestedCircles(centerX, centerY, baseRadiusRef.current, 0, depthRef.current, t, 0, 0, 1);
 
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -576,6 +606,33 @@ export default function NestedCircles() {
                 <input type="range" min={0} max={2} step={0.01} value={timeDelayOscMin} onChange={(e) => setTimeDelayOscMin(+e.target.value)} style={sliderStyle} />
                 <div style={labelStyle}><span>Max</span><span>{timeDelayOscMax.toFixed(2)}s</span></div>
                 <input type="range" min={0} max={2} step={0.01} value={timeDelayOscMax} onChange={(e) => setTimeDelayOscMax(+e.target.value)} style={sliderStyle} />
+              </>
+            )}
+          </div>
+
+          {/* Ring Time Delay */}
+          <div style={sectionStyle}>
+            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Ring Time Delay</div>
+
+            <div style={labelStyle}><span>Delay</span><span>{ringDelay.toFixed(2)}s</span></div>
+            <input type="range" min={0} max={2} step={0.01} value={ringDelay} onChange={(e) => setRingDelay(+e.target.value)} style={sliderStyle} />
+
+            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
+              <input type="checkbox" checked={ringDelayOscEnabled} onChange={(e) => setRingDelayOscEnabled(e.target.checked)} />
+              Oscillate delay
+            </label>
+            {ringDelayOscEnabled && (
+              <>
+                <div style={labelStyle}><span>Wave</span></div>
+                <select value={ringDelayOscWave} onChange={(e) => setRingDelayOscWave(e.target.value as WaveFunction)} style={selectStyle}>
+                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+                </select>
+                <div style={labelStyle}><span>Speed</span><span>{ringDelayOscSpeed.toFixed(2)}</span></div>
+                <input type="range" min={0.05} max={3} step={0.05} value={ringDelayOscSpeed} onChange={(e) => setRingDelayOscSpeed(+e.target.value)} style={sliderStyle} />
+                <div style={labelStyle}><span>Min</span><span>{ringDelayOscMin.toFixed(2)}s</span></div>
+                <input type="range" min={0} max={2} step={0.01} value={ringDelayOscMin} onChange={(e) => setRingDelayOscMin(+e.target.value)} style={sliderStyle} />
+                <div style={labelStyle}><span>Max</span><span>{ringDelayOscMax.toFixed(2)}s</span></div>
+                <input type="range" min={0} max={2} step={0.01} value={ringDelayOscMax} onChange={(e) => setRingDelayOscMax(+e.target.value)} style={sliderStyle} />
               </>
             )}
           </div>
