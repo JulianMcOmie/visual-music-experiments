@@ -271,6 +271,17 @@ export default function NestedCircles() {
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
+    // Compute ring delay amount at a given time
+    const getRingDelay = (globalT: number) => {
+      let rDelay = ringDelayRef.current;
+      if (ringDelayOscEnabledRef.current) {
+        const rWave = waveFunctions[ringDelayOscWaveRef.current];
+        const norm = (rWave(globalT * ringDelayOscSpeedRef.current) + 1) / 2;
+        rDelay = ringDelayOscMinRef.current + norm * (ringDelayOscMaxRef.current - ringDelayOscMinRef.current);
+      }
+      return rDelay;
+    };
+
     const drawNestedCircles = (
       cx: number,
       cy: number,
@@ -279,8 +290,6 @@ export default function NestedCircles() {
       maxDepth: number,
       globalT: number,
       parentIndex: number,
-      ringIndex: number,
-      ringTotal: number,
     ) => {
       // Time delay — depth: innermost circles lead, rippling outward
       let depthDelay = timeDelayRef.current;
@@ -290,16 +299,7 @@ export default function NestedCircles() {
         depthDelay = timeDelayOscMinRef.current + norm * (timeDelayOscMaxRef.current - timeDelayOscMinRef.current);
       }
       const depthFromInner = maxDepth - currentDepth;
-
-      // Time delay — ring: each child in a ring offset by its index
-      let rDelay = ringDelayRef.current;
-      if (ringDelayOscEnabledRef.current) {
-        const rWave = waveFunctions[ringDelayOscWaveRef.current];
-        const norm = (rWave(globalT * ringDelayOscSpeedRef.current) + 1) / 2;
-        rDelay = ringDelayOscMinRef.current + norm * (ringDelayOscMaxRef.current - ringDelayOscMinRef.current);
-      }
-
-      const t = globalT - depthDelay * depthFromInner - rDelay * (ringTotal > 1 ? ringIndex / (ringTotal - 1) : 0);
+      const t = globalT - depthDelay * depthFromInner;
 
       const paletteFunc = colorPalettes[colorPaletteRef.current];
 
@@ -354,38 +354,43 @@ export default function NestedCircles() {
       }
       visible = Math.max(1, Math.min(visible, children));
 
-      // Child circle radius — oscillate the ratio between min and max
-      let ratio = radiusRatioRef.current;
-      if (radiusOscEnabledRef.current) {
-        const rWave = waveFunctions[radiusOscWaveRef.current];
-        const phaseOffset = radiusOscByDepthRef.current ? currentDepth * 0.8 : 0;
-        const norm = (rWave(t * radiusOscSpeedRef.current + phaseOffset) + 1) / 2;
-        ratio = radiusOscMinRef.current + norm * (radiusOscMaxRef.current - radiusOscMinRef.current);
-      }
-      let childRadius = radius * ratio;
-
-      // Rotation for this depth level
-      let speed = rotationSpeedRef.current;
-      if (rotationOscEnabledRef.current) {
-        const rWave = waveFunctions[rotationWaveRef.current];
-        const norm = (rWave(t * rotationOscSpeedRef.current) + 1) / 2;
-        speed = rotationOscMinRef.current + norm * (rotationOscMaxRef.current - rotationOscMinRef.current);
-      }
-      const dir = alternateDirectionRef.current ? (currentDepth % 2 === 0 ? 1 : -1) : 1;
-      const rotAngle = t * speed * dir;
-
-      // Distance from center to child centers
-      const orbitRadius = radius - childRadius;
+      // Ring delay: each child gets its own time offset within this ring
+      const ringDel = getRingDelay(globalT);
 
       for (let i = 0; i < children; i++) {
+        if (i >= visible) continue;
+
+        // Per-child time with ring delay applied
+        const childT = t - ringDel * (children > 1 ? i / (children - 1) : 0);
+
+        // Child circle radius — oscillate the ratio between min and max
+        let ratio = radiusRatioRef.current;
+        if (radiusOscEnabledRef.current) {
+          const rWave = waveFunctions[radiusOscWaveRef.current];
+          const phaseOffset = radiusOscByDepthRef.current ? currentDepth * 0.8 : 0;
+          const norm = (rWave(childT * radiusOscSpeedRef.current + phaseOffset) + 1) / 2;
+          ratio = radiusOscMinRef.current + norm * (radiusOscMaxRef.current - radiusOscMinRef.current);
+        }
+        const childRadius = radius * ratio;
+
+        // Rotation for this depth level
+        let speed = rotationSpeedRef.current;
+        if (rotationOscEnabledRef.current) {
+          const rWave = waveFunctions[rotationWaveRef.current];
+          const norm = (rWave(childT * rotationOscSpeedRef.current) + 1) / 2;
+          speed = rotationOscMinRef.current + norm * (rotationOscMaxRef.current - rotationOscMinRef.current);
+        }
+        const dir = alternateDirectionRef.current ? (currentDepth % 2 === 0 ? 1 : -1) : 1;
+        const rotAngle = childT * speed * dir;
+
+        // Distance from center to child centers
+        const orbitRadius = radius - childRadius;
+
         const angle = rotAngle + (i / children) * Math.PI * 2;
         const childCx = cx + Math.cos(angle) * orbitRadius;
         const childCy = cy + Math.sin(angle) * orbitRadius;
 
-        // Only recurse/draw if this child is visible
-        if (i < visible) {
-          drawNestedCircles(childCx, childCy, childRadius, currentDepth + 1, maxDepth, globalT, i, i, children);
-        }
+        drawNestedCircles(childCx, childCy, childRadius, currentDepth + 1, maxDepth, globalT, i);
       }
     };
 
@@ -405,7 +410,7 @@ export default function NestedCircles() {
       const centerY = canvas.height / 2;
       const t = timeRef.current;
 
-      drawNestedCircles(centerX, centerY, baseRadiusRef.current, 0, depthRef.current, t, 0, 0, 1);
+      drawNestedCircles(centerX, centerY, baseRadiusRef.current, 0, depthRef.current, t, 0);
 
       animationRef.current = requestAnimationFrame(animate);
     };
