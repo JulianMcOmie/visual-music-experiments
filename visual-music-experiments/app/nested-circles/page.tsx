@@ -99,6 +99,22 @@ export default function NestedCircles() {
   const [childOscMax, setChildOscMax] = useState(10);
   const [childOscWave, setChildOscWave] = useState<WaveFunction>("sin");
 
+  // Visible children (how many of the positioned children are drawn)
+  const [visibleChildren, setVisibleChildren] = useState(6);
+  const [visibleOscEnabled, setVisibleOscEnabled] = useState(false);
+  const [visibleOscSpeed, setVisibleOscSpeed] = useState(0.5);
+  const [visibleOscMin, setVisibleOscMin] = useState(2);
+  const [visibleOscMax, setVisibleOscMax] = useState(6);
+  const [visibleOscWave, setVisibleOscWave] = useState<WaveFunction>("sin");
+
+  // Time delay (ripples from innermost depth outward)
+  const [timeDelay, setTimeDelay] = useState(0);
+  const [timeDelayOscEnabled, setTimeDelayOscEnabled] = useState(false);
+  const [timeDelayOscSpeed, setTimeDelayOscSpeed] = useState(0.3);
+  const [timeDelayOscMin, setTimeDelayOscMin] = useState(0);
+  const [timeDelayOscMax, setTimeDelayOscMax] = useState(1.0);
+  const [timeDelayOscWave, setTimeDelayOscWave] = useState<WaveFunction>("sin");
+
   // Color
   const [colorPalette, setColorPalette] = useState<ColorPalette>("ocean");
   const [baseHue, setBaseHue] = useState(200);
@@ -134,6 +150,18 @@ export default function NestedCircles() {
   const childOscMinRef = useRef(childOscMin);
   const childOscMaxRef = useRef(childOscMax);
   const childOscWaveRef = useRef(childOscWave);
+  const visibleChildrenRef = useRef(visibleChildren);
+  const visibleOscEnabledRef = useRef(visibleOscEnabled);
+  const visibleOscSpeedRef = useRef(visibleOscSpeed);
+  const visibleOscMinRef = useRef(visibleOscMin);
+  const visibleOscMaxRef = useRef(visibleOscMax);
+  const visibleOscWaveRef = useRef(visibleOscWave);
+  const timeDelayRef = useRef(timeDelay);
+  const timeDelayOscEnabledRef = useRef(timeDelayOscEnabled);
+  const timeDelayOscSpeedRef = useRef(timeDelayOscSpeed);
+  const timeDelayOscMinRef = useRef(timeDelayOscMin);
+  const timeDelayOscMaxRef = useRef(timeDelayOscMax);
+  const timeDelayOscWaveRef = useRef(timeDelayOscWave);
   const colorPaletteRef = useRef(colorPalette);
   const baseHueRef = useRef(baseHue);
   const saturationRef = useRef(saturation);
@@ -168,6 +196,18 @@ export default function NestedCircles() {
   useEffect(() => { childOscMinRef.current = childOscMin; }, [childOscMin]);
   useEffect(() => { childOscMaxRef.current = childOscMax; }, [childOscMax]);
   useEffect(() => { childOscWaveRef.current = childOscWave; }, [childOscWave]);
+  useEffect(() => { visibleChildrenRef.current = visibleChildren; }, [visibleChildren]);
+  useEffect(() => { visibleOscEnabledRef.current = visibleOscEnabled; }, [visibleOscEnabled]);
+  useEffect(() => { visibleOscSpeedRef.current = visibleOscSpeed; }, [visibleOscSpeed]);
+  useEffect(() => { visibleOscMinRef.current = visibleOscMin; }, [visibleOscMin]);
+  useEffect(() => { visibleOscMaxRef.current = visibleOscMax; }, [visibleOscMax]);
+  useEffect(() => { visibleOscWaveRef.current = visibleOscWave; }, [visibleOscWave]);
+  useEffect(() => { timeDelayRef.current = timeDelay; }, [timeDelay]);
+  useEffect(() => { timeDelayOscEnabledRef.current = timeDelayOscEnabled; }, [timeDelayOscEnabled]);
+  useEffect(() => { timeDelayOscSpeedRef.current = timeDelayOscSpeed; }, [timeDelayOscSpeed]);
+  useEffect(() => { timeDelayOscMinRef.current = timeDelayOscMin; }, [timeDelayOscMin]);
+  useEffect(() => { timeDelayOscMaxRef.current = timeDelayOscMax; }, [timeDelayOscMax]);
+  useEffect(() => { timeDelayOscWaveRef.current = timeDelayOscWave; }, [timeDelayOscWave]);
   useEffect(() => { colorPaletteRef.current = colorPalette; }, [colorPalette]);
   useEffect(() => { baseHueRef.current = baseHue; }, [baseHue]);
   useEffect(() => { saturationRef.current = saturation; }, [saturation]);
@@ -214,9 +254,20 @@ export default function NestedCircles() {
       radius: number,
       currentDepth: number,
       maxDepth: number,
-      t: number,
+      globalT: number,
       parentIndex: number,
     ) => {
+      // Time delay: innermost circles lead, rippling outward
+      // Deepest depth (maxDepth) uses globalT, shallower levels are delayed
+      let delay = timeDelayRef.current;
+      if (timeDelayOscEnabledRef.current) {
+        const dWave = waveFunctions[timeDelayOscWaveRef.current];
+        const norm = (dWave(globalT * timeDelayOscSpeedRef.current) + 1) / 2;
+        delay = timeDelayOscMinRef.current + norm * (timeDelayOscMaxRef.current - timeDelayOscMinRef.current);
+      }
+      const depthFromInner = maxDepth - currentDepth;
+      const t = globalT - delay * depthFromInner;
+
       const paletteFunc = colorPalettes[colorPaletteRef.current];
 
       // Compute current hue
@@ -252,7 +303,7 @@ export default function NestedCircles() {
 
       if (isLeaf) return;
 
-      // How many children at this level
+      // How many children are positioned at this level
       let children = childCountRef.current;
       if (childOscEnabledRef.current) {
         const wave = waveFunctions[childOscWaveRef.current];
@@ -260,6 +311,15 @@ export default function NestedCircles() {
         children = Math.round(childOscMinRef.current + norm * (childOscMaxRef.current - childOscMinRef.current));
         children = Math.max(2, children);
       }
+
+      // How many of those children are visible
+      let visible = Math.min(visibleChildrenRef.current, children);
+      if (visibleOscEnabledRef.current) {
+        const vWave = waveFunctions[visibleOscWaveRef.current];
+        const norm = (vWave(t * visibleOscSpeedRef.current) + 1) / 2;
+        visible = Math.round(visibleOscMinRef.current + norm * (visibleOscMaxRef.current - visibleOscMinRef.current));
+      }
+      visible = Math.max(1, Math.min(visible, children));
 
       // Child circle radius
       let childRadius = radius * radiusRatioRef.current;
@@ -290,7 +350,10 @@ export default function NestedCircles() {
         const childCx = cx + Math.cos(angle) * orbitRadius;
         const childCy = cy + Math.sin(angle) * orbitRadius;
 
-        drawNestedCircles(childCx, childCy, childRadius, currentDepth + 1, maxDepth, t, i);
+        // Only recurse/draw if this child is visible
+        if (i < visible) {
+          drawNestedCircles(childCx, childCy, childRadius, currentDepth + 1, maxDepth, globalT, i);
+        }
       }
     };
 
@@ -455,6 +518,60 @@ export default function NestedCircles() {
                 <input type="range" min={2} max={12} step={1} value={childOscMin} onChange={(e) => setChildOscMin(+e.target.value)} style={sliderStyle} />
                 <div style={labelStyle}><span>Max</span><span>{childOscMax}</span></div>
                 <input type="range" min={2} max={12} step={1} value={childOscMax} onChange={(e) => setChildOscMax(+e.target.value)} style={sliderStyle} />
+              </>
+            )}
+          </div>
+
+          {/* Visible Children */}
+          <div style={sectionStyle}>
+            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Visible Children</div>
+
+            <div style={labelStyle}><span>Visible</span><span>{visibleChildren}</span></div>
+            <input type="range" min={1} max={12} step={1} value={visibleChildren} onChange={(e) => setVisibleChildren(+e.target.value)} style={sliderStyle} />
+
+            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
+              <input type="checkbox" checked={visibleOscEnabled} onChange={(e) => setVisibleOscEnabled(e.target.checked)} />
+              Oscillate visible count
+            </label>
+            {visibleOscEnabled && (
+              <>
+                <div style={labelStyle}><span>Wave</span></div>
+                <select value={visibleOscWave} onChange={(e) => setVisibleOscWave(e.target.value as WaveFunction)} style={selectStyle}>
+                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+                </select>
+                <div style={labelStyle}><span>Speed</span><span>{visibleOscSpeed.toFixed(2)}</span></div>
+                <input type="range" min={0.05} max={3} step={0.05} value={visibleOscSpeed} onChange={(e) => setVisibleOscSpeed(+e.target.value)} style={sliderStyle} />
+                <div style={labelStyle}><span>Min</span><span>{visibleOscMin}</span></div>
+                <input type="range" min={1} max={12} step={1} value={visibleOscMin} onChange={(e) => setVisibleOscMin(+e.target.value)} style={sliderStyle} />
+                <div style={labelStyle}><span>Max</span><span>{visibleOscMax}</span></div>
+                <input type="range" min={1} max={12} step={1} value={visibleOscMax} onChange={(e) => setVisibleOscMax(+e.target.value)} style={sliderStyle} />
+              </>
+            )}
+          </div>
+
+          {/* Time Delay */}
+          <div style={sectionStyle}>
+            <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "#4488ff" }}>Time Delay (Inner → Outer)</div>
+
+            <div style={labelStyle}><span>Delay</span><span>{timeDelay.toFixed(2)}s</span></div>
+            <input type="range" min={0} max={2} step={0.01} value={timeDelay} onChange={(e) => setTimeDelay(+e.target.value)} style={sliderStyle} />
+
+            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#aaa", cursor: "pointer" }}>
+              <input type="checkbox" checked={timeDelayOscEnabled} onChange={(e) => setTimeDelayOscEnabled(e.target.checked)} />
+              Oscillate delay
+            </label>
+            {timeDelayOscEnabled && (
+              <>
+                <div style={labelStyle}><span>Wave</span></div>
+                <select value={timeDelayOscWave} onChange={(e) => setTimeDelayOscWave(e.target.value as WaveFunction)} style={selectStyle}>
+                  {waveFnNames.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+                </select>
+                <div style={labelStyle}><span>Speed</span><span>{timeDelayOscSpeed.toFixed(2)}</span></div>
+                <input type="range" min={0.05} max={3} step={0.05} value={timeDelayOscSpeed} onChange={(e) => setTimeDelayOscSpeed(+e.target.value)} style={sliderStyle} />
+                <div style={labelStyle}><span>Min</span><span>{timeDelayOscMin.toFixed(2)}s</span></div>
+                <input type="range" min={0} max={2} step={0.01} value={timeDelayOscMin} onChange={(e) => setTimeDelayOscMin(+e.target.value)} style={sliderStyle} />
+                <div style={labelStyle}><span>Max</span><span>{timeDelayOscMax.toFixed(2)}s</span></div>
+                <input type="range" min={0} max={2} step={0.01} value={timeDelayOscMax} onChange={(e) => setTimeDelayOscMax(+e.target.value)} style={sliderStyle} />
               </>
             )}
           </div>
