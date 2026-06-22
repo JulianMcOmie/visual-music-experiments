@@ -388,7 +388,7 @@ export default function CubeTube() {
     camera.lookAt(0, 0, 30);
 
     // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x000510); // Black background
     containerRef.current.appendChild(renderer.domElement);

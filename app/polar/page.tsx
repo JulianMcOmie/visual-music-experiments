@@ -264,7 +264,7 @@ export default function PolarVisualizer() {
     );
     // Camera will be updated in the animate loop based on layer count
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     containerRef.current.appendChild(renderer.domElement);
 
