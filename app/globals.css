@@ -1,0 +1,28 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+/* Theme variables used by the /keyboard-circles instrument */
+:root {
+  --bg-color: #0a0a0a;
+  --circle-fill: #4ade80;
+  --circle-stroke: #ffffff;
+  --glow-color: rgba(74, 222, 128, 0.25);
+  --hint-color: #888888;
+}
+
+html,
+body {
+  max-width: 100vw;
+  background-color: #0a0a0a;
+  color: #fff;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Roboto", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

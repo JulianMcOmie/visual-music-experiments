@@ -21,10 +21,13 @@ function generateCircles() {
 
     for (let i = 0; i < count; i++) {
       const angle = (i * (360 / count) - 90) * (Math.PI / 180);
+      // Round to avoid SSR/client hydration mismatches: Math.cos/Math.sin
+      // are not guaranteed to be bit-identical across JS engines/versions,
+      // so the serialized SVG coordinate strings can otherwise differ.
       circles.push({
         id: id++,
-        cx: Math.cos(angle) * distance,
-        cy: Math.sin(angle) * distance,
+        cx: Math.round(Math.cos(angle) * distance * 1000) / 1000,
+        cy: Math.round(Math.sin(angle) * distance * 1000) / 1000,
         ring: ringNum,
         index: i,
       });

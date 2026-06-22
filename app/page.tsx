@@ -7,6 +7,7 @@ const projects = [
     description: "Layered polar wave patterns with rotated shape overlays, concentric rings, and oscillating parameters.",
     color: "#4488ff",
     bgColor: "#0a0a0a",
+    snapshot: "/snapshots/polar-functions.png",
   },
   {
     title: "3D Polar Functions",
@@ -14,13 +15,23 @@ const projects = [
     description: "3D rose, spiral, cardioid, lemniscate, and limaçon curves with depth layers and color palettes.",
     color: "#aa66ff",
     bgColor: "#000510",
+    snapshot: "/snapshots/3d-polar-functions.png",
   },
   {
-    title: "Warp Speed Tunnel",
+    title: "3D Tunnel",
     href: "/tunnel",
+    description: "Hypnotic journey through an infinite 3D tunnel with colorful rings and customizable geometry.",
+    color: "#66ccff",
+    bgColor: "#000000",
+    snapshot: "/snapshots/3d-tunnel.png",
+  },
+  {
+    title: "Polar Bursts",
+    href: "/polar-bursts",
     description: "First-person flight through an infinite procedural tunnel with color-shifting rings.",
     color: "#ff6644",
     bgColor: "#000508",
+    snapshot: "/snapshots/polar-bursts.png",
   },
   {
     title: "Cube Tube",
@@ -28,6 +39,7 @@ const projects = [
     description: "A tube of rotating cubes stretching into depth, with oscillation-driven color and movement.",
     color: "#44cc88",
     bgColor: "#000510",
+    snapshot: "/snapshots/cube-tube.png",
   },
   {
     title: "Penrose Tiling",
@@ -35,6 +47,39 @@ const projects = [
     description: "Aperiodic P2 Penrose tiling with per-tile oscillators, spiral delay modes, and smooth pause/resume interpolation.",
     color: "#ffaa44",
     bgColor: "#050505",
+    snapshot: "/snapshots/penrose-tiling.png",
+  },
+  {
+    title: "Tiled Room",
+    href: "/tiled-room",
+    description: "A cruciform cathedral covered in 81 isohedral tiling types with continuous morphing and edge curvature.",
+    color: "#8844ff",
+    bgColor: "#020208",
+    snapshot: "/snapshots/tiled-room.png",
+  },
+  {
+    title: "Expansive Room",
+    href: "/expansive-room",
+    description: "A vast octagonal hall where every surface is covered in unique geometric tessellation patterns — pure visual awe through scale and pattern.",
+    color: "#ffaa44",
+    bgColor: "#020208",
+    snapshot: "/snapshots/expansive-room.png",
+  },
+  {
+    title: "Nested Circles",
+    href: "/nested-circles",
+    description: "Fractal circles within circles within circles — recursive ring patterns with rotating, pulsing, and color-shifting oscillators.",
+    color: "#44ccdd",
+    bgColor: "#0a0a0a",
+    snapshot: "/snapshots/nested-circles.png",
+  },
+  {
+    title: "Keyboard Circles",
+    href: "/keyboard-circles",
+    description: "A playable instrument: hold keys to fill symmetric circle patterns across concentric rings — halves, stars, checkerboards, and more.",
+    color: "#4ade80",
+    bgColor: "#0a0a0a",
+    snapshot: "/snapshots/keyboard-circles.png",
   },
 ];
 
@@ -88,20 +133,29 @@ export default function Gallery() {
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLAnchorElement).style.borderColor = project.color;
               (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
-              (e.currentTarget.querySelector("iframe") as HTMLIFrameElement)?.contentWindow?.postMessage("play", "*");
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLAnchorElement).style.borderColor = "#222";
               (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
-              (e.currentTarget.querySelector("iframe") as HTMLIFrameElement)?.contentWindow?.postMessage("pause", "*");
             }}
           >
-            <div style={{ overflow: "hidden", borderRadius: "8px", height: "160px", background: project.bgColor }}>
-              <iframe
-                src={`${project.href}?preview`}
-                title={project.title}
-                style={{ width: "100%", height: "100%", border: "none", pointerEvents: "none" }}
-                scrolling="no"
+            <div
+              style={{
+                overflow: "hidden",
+                borderRadius: "8px",
+                height: "160px",
+                background: project.bgColor,
+                position: "relative"
+              }}
+            >
+              <img
+                src={project.snapshot}
+                alt={project.title}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover"
+                }}
               />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

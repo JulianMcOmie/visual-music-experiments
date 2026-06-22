@@ -1,11 +1,19 @@
 import { chromium } from 'playwright';
 
+const BASE = process.env.SNAPSHOT_BASE_URL || 'http://localhost:3000';
+
+// path -> snapshot filename, matching the gallery cards in app/page.tsx
 const projects = [
   { name: 'polar-functions', path: '/circle' },
   { name: '3d-polar-functions', path: '/polar' },
-  { name: 'warp-speed-tunnel', path: '/tunnel' },
+  { name: '3d-tunnel', path: '/tunnel' },
+  { name: 'polar-bursts', path: '/polar-bursts' },
   { name: 'cube-tube', path: '/cube-tube' },
   { name: 'penrose-tiling', path: '/penrose-tiling' },
+  { name: 'tiled-room', path: '/tiled-room' },
+  { name: 'expansive-room', path: '/expansive-room' },
+  { name: 'nested-circles', path: '/nested-circles' },
+  { name: 'keyboard-circles', path: '/keyboard-circles' },
 ];
 
 async function captureSnapshots() {
@@ -26,7 +34,7 @@ async function captureSnapshots() {
     console.log(`Capturing ${project.name}...`);
 
     // Navigate to the project page in preview mode (hides UI)
-    await page.goto(`http://localhost:3000${project.path}?preview`, {
+    await page.goto(`${BASE}${project.path}?preview`, {
       waitUntil: 'networkidle',
       timeout: 30000
     });
